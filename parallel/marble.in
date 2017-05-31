@@ -1,0 +1,6 @@
+nit = 300 
+nout = 100
+Temp = 1.0
+nsize = 16
+pdvac=0.05
+pdratio=0.5
