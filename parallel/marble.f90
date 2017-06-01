@@ -17,7 +17,9 @@ program marble
   integer, allocatable, dimension(:,:) :: vaclist, vcl_lft, vcl_rgt, vcl_up, vcl_dwn, vac2move, vcl_still
 
   integer :: i, j, k, ierror, req, msg_status, nvac, nvacob, rbuf_size, nvac2move, nvac_still
-  integer :: nvac_lft, nvac_rgt, nvac_up, nvac_dwn
+  integer :: nvac_lft, nvac_rgt, nvac_up, nvac_dwn, totnvac
+
+  double precision :: startTime, endTime
 
   !Initialize the MPI environment
   call MPI_Init(ierror)
@@ -52,6 +54,8 @@ program marble
   nrow = nsize / dims(1)
   ncol = nsize / dims(2)
 
+  !write(0,*)'Decomposition: ',nrow,'x',ncol
+
   !Create MPI types
   !Define new type COLUMN
    call MPI_Type_contiguous(ncol+2, MPI_INTEGER, MPI_TYPE_COL, ierror)
@@ -60,7 +64,7 @@ program marble
    call MPI_Type_vector(nrow+2, 1, ncol+2, MPI_INTEGER, MPI_TYPE_ROW, ierror)
    call MPI_Type_commit(MPI_TYPE_ROW, ierror)
    !Define BLOCK type
-   call MPI_Type_vector(nrow, ncol, nsize, MPI_INTEGER, MPI_BLOCK2, ierror)
+   call MPI_Type_vector(ncol, nrow, nsize, MPI_INTEGER, MPI_BLOCK2, ierror)
    call MPI_Type_commit(MPI_BLOCK2, ierror)
    call MPI_Type_create_resized(MPI_BLOCK2, 0, 4, MPI_BLOCK, ierror)
    call MPI_Type_commit(MPI_BLOCK, ierror)
@@ -71,7 +75,7 @@ program marble
   allocate(displs(dims(1)*dims(2)))
 
   !Calculate possible maximal vacancies and allocate vaclist array
-  maxvacnum = nint(nsize * nsize * pdvac * 2e0)
+  maxvacnum = nint(nsize * nsize * pdvac * 4e0)
   write(0,*)'vac size list: ', maxvacnum
 
   allocate(vaclist(4,maxvacnum))
@@ -90,22 +94,31 @@ program marble
     i = crd(1)
     j = crd(2)
     displs(k) = (i* nsize * nrow + j* ncol)*4
+    !write(0,*)k-1, i, j, displs(k)
   end do
 
   !Allocate memory
   allocate(mesh(0:nrow+1, 0:ncol+1))
   allocate(nmesh(0:nrow+1, 0:ncol+1))
 
+  !seed the random number generator
+  call MC_init_random_seed(rank)
   !Initialize the grid
   call MC_init_mesh(mesh(1:nrow, 1:ncol), vaclist, nvac, pdvac, pdratio)
 
   !Main iteration loop
+  startTime = MPI_Wtime()
   do it = 1, nit
     !Generate velocities
     call MC_genvel(vaclist, nvac, vcl_lft, nvac_lft, vcl_rgt, nvac_rgt,&
      vcl_up, nvac_up, vcl_dwn, nvac_dwn, vcl_still, nvac_still)
+     !call print_vac_list(vaclist, nvac, 'all')
+     !call print_vac_list(vcl_up, nvac_up, 'up')
+     !call print_vac_list(vcl_dwn, nvac_dwn, 'down')
+     !call print_vac_list(vcl_still, nvac_still, 'still')
 
     !copy boundaries
+
     call MC_select_boundary_vac(vcl_up, nvac_up, 'up', cbuf, nvacob)
     call MPI_Sendrecv(mesh(1, 0), 1, MPI_TYPE_ROW, up, 0,&
       mesh(nrow+1,0),1,MPI_TYPE_ROW,down,0,MPI_COMM_2D,&
@@ -132,53 +145,69 @@ program marble
       call MC_update_vaclist(vcl_dwn, nvac_dwn, rbuf, rbuf_size/4)
     end if
 
-    nvac2move = 0
-    
-    call MC_join_vac(vac2move, nvac2move, vcl_up, nvac_up)
-    call MC_join_vac(vac2move, nvac2move, vcl_dwn, nvac_dwn)
 
+    call MC_select_boundary_vac(vcl_lft, nvac_lft, 'left', cbuf, nvacob)
+    call MPI_Sendrecv(mesh(0, 1), 1, MPI_TYPE_COL, left , 0,&
+      mesh(0, ncol+1), 1, MPI_TYPE_COL, right, 0, MPI_COMM_2D,&
+      MPI_STATUS_IGNORE, ierror)
+    call MPI_Isend(cbuf, 4 * nvacob, MPI_INTEGER, left, 0, MPI_COMM_2D, req, ierror)
+    call MPI_Probe(right, MPI_ANY_TAG, MPI_COMM_2D, msg_status, ierror)
+    call MPI_Get_count(msg_status, MPI_INTEGER, rbuf_size, ierror)
+    call MPI_Recv(rbuf, rbuf_size, MPI_INTEGER, right, 0, MPI_COMM_2D,&
+      MPI_STATUS_IGNORE, ierror)
+    if (rbuf_size > 0) then
+      call MC_update_vaclist(vcl_lft, nvac_lft, rbuf, rbuf_size/4)
+    end if
+
+    call MC_select_boundary_vac(vcl_rgt, nvac_rgt, 'right', cbuf, nvacob)
+    call MPI_Sendrecv(mesh(0, ncol), 1, MPI_TYPE_COL, right, 0,&
+      mesh(0, 0), 1, MPI_TYPE_COL, left , 0, MPI_COMM_2D,&
+      MPI_STATUS_IGNORE, ierror)
+    call MPI_Isend(cbuf, 4 * nvacob, MPI_INTEGER, right, 0, MPI_COMM_2D, req, ierror)
+    call MPI_Probe(left, MPI_ANY_TAG, MPI_COMM_2D, msg_status, ierror)
+    call MPI_Get_count(msg_status, MPI_INTEGER, rbuf_size, ierror)
+    call MPI_Recv(rbuf, rbuf_size, MPI_INTEGER, left, 0, MPI_COMM_2D,&
+      MPI_STATUS_IGNORE, ierror)
+    if (rbuf_size > 0) then
+      call MC_update_vaclist(vcl_rgt, nvac_rgt, rbuf, rbuf_size/4)
+    end if
+
+    nvac2move = 0
+    call MC_join_vac(vac2move, nvac2move, vcl_up, nvac_up, 'now')
+    call MC_join_vac(vac2move, nvac2move, vcl_dwn, nvac_dwn, 'now')
     !Sort vacancy list
     call MC_sort_vclist(vac2move, nvac2move, 1)
-    !make one MC step up
-    do i = 0, nrow+1
-      write(0,'(I3,A1,<ncol+2>I1)')i,':',(mesh(i,j),j=0,ncol+1)
-    end do
     call MC_Step(mesh(0:nrow+1, 0:ncol+1), vac2move, nvac2move)
-    write(0,*)'end mc step',it
-    do i = 0, nrow+1
-      write(0,'(I3,A1,<ncol+2>I1)')i,':',(mesh(i,j),j=0,ncol+1)
-    end do
 
     nvac = 0
-    call MC_join_vac(vaclist, nvac, vac2move, nvac2move)
-    call MC_join_vac(vaclist, nvac, vcl_still, nvac_still)
+    call MC_join_vac(vaclist, nvac, vac2move, nvac2move, 'now')
 
-    do i = 1, nvac
-      write(0,'(A8,I3,A2,I3,A2,I3,A1)')'step: ',it,' (',vaclist(1, i),', ',vaclist(2, i),')'
-    end do
-    !call select_boundary_vac(vcl_dwn, nvac_dwn, 'down', cbuf, nvacob)
+    nvac2move = 0
+    call MC_join_vac(vac2move, nvac2move, vcl_lft, nvac_lft, 'now')
+    call MC_join_vac(vac2move, nvac2move, vcl_rgt, nvac_rgt, 'now')
+    !Sort vacancy list
+    call MC_sort_vclist(vac2move, nvac2move, 1)
+    call MC_Step(mesh(0:nrow+1, 0:ncol+1), vac2move, nvac2move)
 
-    !!make one MC step up
-    !call MC_Step(mesh(1:nrow, 1:ncol), vaclist, nvac, 'up')
+    !do i = 0, nrow+1
+    !  write(0,'(I3,A1,<ncol+2>I1)')i,':',(mesh(i,j),j=0,ncol+1)
+    !end do
 
-
-!    call MC_Step(mesh(1:nrow, 1:ncol), vaclist, nvac, 'left')
-
-!    call MPI_Sendrecv(mesh(0, 1), 1, MPI_TYPE_COL, left , 0,&
-!      mesh(0, ncol+1), 1, MPI_TYPE_COL, right, 0, MPI_COMM_2D,&
-!      MPI_STATUS_IGNORE, ierror)
-!    call MPI_Sendrecv(mesh(0, ncol), 1, MPI_TYPE_COL, right, 0,&
-!      mesh(0, 0), 1, MPI_TYPE_COL, left , 0, MPI_COMM_2D,&
-!      MPI_STATUS_IGNORE, ierror)
-
+    call MC_join_vac(vaclist, nvac, vac2move, nvac2move, 'now')
+    call MC_join_vac(vaclist, nvac, vcl_still, nvac_still, 'now')
 
     if (mod(it, nout).eq.0) then
+      call MPI_Reduce(nvac, totnvac, 1, MPI_INTEGER, MPI_SUM, 0, MPI_COMM_2D, ierror)
       if (rank.eq.0) then
-        write(6,'(A7,I10,A8,I4)')' step = ',it,'nvac = ',nvac
+        write(6,'(A7,I10,A8,I4)')' step = ',it,'nvac = ',totnvac
       end if
       call write_out_mesh(mesh(1:nrow, 1:ncol))
     end if
   end do
+  endTime = MPI_Wtime()
+  if (rank.eq.0) then
+    write(0,'(A16,F10.2)'),'Execution time: ',endTime-startTime
+  end if
   !Deallocate the memory
   deallocate(mesh)
   deallocate(nmesh)

@@ -59,8 +59,10 @@ module mc
     do vidx = 1, nvac
       ii = vaclist(1, vidx)
       jj = vaclist(2, vidx)
+
       call random_number(p)
-      p = p*0.41d0 + 0.38d0
+      !p = p*0.4d0 + 0.4d0
+      !write(0,*)'process',ii,jj,p
       if (p.lt.0.2) then
         vx = 0
         vy =  -1
@@ -125,17 +127,20 @@ module mc
       ii = i + vaclist(3, vidx)
       jj = j + vaclist(4, vidx)
       !Move the vacancy only if destination is NOT vacancy
-      if (mesh(ii, jj).ne.type_vac) then
+      if ((mesh(ii, jj).ne.type_vac).and.((ii.ge.1).and.(ii.le.nrow)).and.((jj.ge.1).and.(jj.le.ncol))) then
         vaclist(1, vidx) = ii
         vaclist(2, vidx) = jj
 
-        write(0,'(A1 ,I3   ,A2 ,I1        ,A1 ,I3,A2  ,I3,A5     ,I1          ,A1 ,I3,A2  ,I3,A1)')&
-                  '[',vidx,'] ',mesh(i, j),'(',i ,', ',j ,') -> ',mesh(ii, jj),'(',ii,', ',jj,')'
+        !write(0,'(A2 ,I3   ,A2 ,I1        ,A1 ,I3,A2  ,I3,A5     ,I1          ,A1 ,I3,A2  ,I3,A1)')&
+        !          ' [',vidx,'] ',mesh(i, j),'(',i ,', ',j ,') -> ',mesh(ii, jj),'(',ii,', ',jj,')'
         !swap the elements
 
         swap = mesh(ii, jj)
         mesh(ii, jj) = mesh(i, j)
         mesh(i, j) = swap
+      else
+        !write(0,'(A2 ,I3   ,A2 ,I1        ,A1 ,I3,A2  ,I3,A5     ,I1          ,A1 ,I3,A2  ,I3,A1)')&
+        !          's[',vidx,'] ',mesh(i, j),'(',i ,', ',j ,') -> ',mesh(ii, jj),'(',ii,', ',jj,')'
       end if
     end do
 
@@ -206,27 +211,34 @@ module mc
     nvacob = 0
     do i = 1, nvac
       if (vclist(id,i).eq.side_id) then
-        write(0,*)'[',nvacob,'] (',vclist(1,i),', ',vclist(2,i),')'
+        !write(0,*)'[',nvacob,'] (',vclist(1,i),', ',vclist(2,i),')'
         nvacob = nvacob + 1
         buf(:, nvacob) = vclist(:,i)
         buf(id, nvacob) = offset
       end if
     end do
   end subroutine MC_select_boundary_vac
-  subroutine MC_join_vac(vaclist, nvac, vac_sub_list, nvac_subc)
+  subroutine MC_join_vac(vaclist, nvac, vac_sub_list, nvac_subc, direction)
     implicit none
     integer, dimension(:,:), intent(inout) :: vaclist
     integer, intent(inout) :: nvac
     integer, dimension(:,:), intent(inout) :: vac_sub_list
     integer, intent(in) :: nvac_subc
+    character(len=*), intent(in) :: direction
 
     integer :: i, idx, ii, jj
 
     idx = 1
     do while (idx.le.nvac_subc)
-      ii = vac_sub_list(1, idx)+vac_sub_list(3, idx)
-      jj = vac_sub_list(2, idx)+vac_sub_list(4, idx)
-      if (((ii.ge.1).and.(ii.le.nrow)).and.((ii.ge.1).and.(ii.le.ncol))) then
+      ii = vac_sub_list(1, idx)
+      jj = vac_sub_list(2, idx)
+
+      if (trim(direction).eq.'forward') then
+       ii = ii + vac_sub_list(3, idx)
+       jj = jj + vac_sub_list(4, idx)
+     end if
+
+      if (((ii.ge.1).and.(ii.le.nrow)).and.((jj.ge.1).and.(jj.le.ncol))) then
         nvac = nvac + 1
         vaclist(:, nvac) = vac_sub_list(:, idx)
       end if
@@ -234,4 +246,21 @@ module mc
     end do
 
   end subroutine MC_join_vac
+
+  subroutine MC_init_random_seed(rank)
+    implicit none
+    integer, intent(in) :: rank
+    integer :: i, n, clock
+    integer, dimension(:), allocatable :: seed
+
+    call random_seed(size = n)
+    allocate(seed(n))
+
+    call system_clock(COUNT=clock)
+
+    seed = clock + rank * 37 * (/ (i - 1, i = 1, n) /)
+    call random_seed(PUT = seed)
+
+    deallocate(seed)
+    end subroutine MC_init_random_seed
 end module mc

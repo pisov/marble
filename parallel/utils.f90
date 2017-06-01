@@ -68,4 +68,18 @@ module utils
   end do
   end subroutine read_input_file
 
+  subroutine print_vac_list(vaclist, nvac, listname)
+    implicit none
+    integer, dimension(4,maxvacnum), intent(in) :: vaclist
+    integer, intent(in) :: nvac
+    character(len=*) :: listname
+
+    integer :: i
+
+    do i = 1, nvac
+        write(0,'(A1,A5,A10,I3,A1,I3,A2,I3,A2,I3,A1)')'[',listname,'] step: ',it,':',i,' (',vaclist(1, i),', ',vaclist(2, i),')'
+    end do
+
+  end subroutine print_vac_list
+
 end module utils
