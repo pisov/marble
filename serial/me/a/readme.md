@@ -6,9 +6,10 @@ In order to generate images you must make a subfolder "./img/", where the images
 -----------------------------------------------------------------------------------------------------------------------
 To compile the program use the bash script compile.sh
 
+```
 ./compile.sh
-
+```
 To run the program
-
+```
 ./npv.x
-
+```
