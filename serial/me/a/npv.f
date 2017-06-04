@@ -89,7 +89,6 @@ c-----------------------------------------
        integer,dimension(:), allocatable :: sizes
        logical, dimension(:), allocatable :: mask
         
-!pri clusterdata ima 4 vida
 !label(*,*,1) -> labels
 !label(*,*,2) -> type of cluster
 
