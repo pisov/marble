@@ -1,5 +1,6 @@
 #!/bin/bash
 
+mkdir -p img
 echo -n Compiling ... 
 
 gfortran -c utils.f90
