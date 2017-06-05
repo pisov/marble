@@ -120,6 +120,7 @@ program marble
     !copy boundaries
 
     call MC_select_boundary_vac(vcl_up, nvac_up, 'up', cbuf, nvacob)
+    !write(0, *)'it:',it,rank,':[up]',up,'->[down]',down
     call MPI_Sendrecv(mesh(1, 0), 1, MPI_TYPE_ROW, up, 0,&
       mesh(nrow+1,0),1,MPI_TYPE_ROW,down,0,MPI_COMM_2D,&
       MPI_STATUS_IGNORE, ierror)
@@ -133,13 +134,14 @@ program marble
     end if
 
     call MC_select_boundary_vac(vcl_dwn, nvac_dwn, 'down', cbuf, nvacob)
+    !write(0, *)'it:',it,rank,':[down]',down,'->[up]',up
     call MPI_Sendrecv(mesh(nrow, 0), 1, MPI_TYPE_ROW, down, 0,&
       mesh(0, 0), 1, MPI_TYPE_ROW, up, 0, MPI_COMM_2D,&
       MPI_STATUS_IGNORE, ierror)
     call MPI_Isend(cbuf, 4 * nvacob, MPI_INTEGER, down, 0, MPI_COMM_2D, req, ierror)
     call MPI_Probe(up, MPI_ANY_TAG, MPI_COMM_2D, msg_status, ierror)
     call MPI_Get_count(msg_status, MPI_INTEGER, rbuf_size, ierror)
-    call MPI_Recv(rbuf, rbuf_size, MPI_INTEGER, down, 0, MPI_COMM_2D,&
+    call MPI_Recv(rbuf, rbuf_size, MPI_INTEGER, up, 0, MPI_COMM_2D,&
       MPI_STATUS_IGNORE, ierror)
     if (rbuf_size > 0) then
       call MC_update_vaclist(vcl_dwn, nvac_dwn, rbuf, rbuf_size/4)
@@ -147,6 +149,7 @@ program marble
 
 
     call MC_select_boundary_vac(vcl_lft, nvac_lft, 'left', cbuf, nvacob)
+    !write(0, *)'it:',it,rank,':[left]',left,'->[right]',right
     call MPI_Sendrecv(mesh(0, 1), 1, MPI_TYPE_COL, left , 0,&
       mesh(0, ncol+1), 1, MPI_TYPE_COL, right, 0, MPI_COMM_2D,&
       MPI_STATUS_IGNORE, ierror)
@@ -160,6 +163,7 @@ program marble
     end if
 
     call MC_select_boundary_vac(vcl_rgt, nvac_rgt, 'right', cbuf, nvacob)
+    !write(0, *)'it:',it,rank,':[right]',right,'->[left]',left
     call MPI_Sendrecv(mesh(0, ncol), 1, MPI_TYPE_COL, right, 0,&
       mesh(0, 0), 1, MPI_TYPE_COL, left , 0, MPI_COMM_2D,&
       MPI_STATUS_IGNORE, ierror)
