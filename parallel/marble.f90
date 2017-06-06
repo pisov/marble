@@ -12,7 +12,7 @@ program marble
   !blue-blue, blue-red, red-red, red-vacancy, blue-cavancy, vacancy-vacancy
   double precision, dimension(3) :: Jmtx
   !Grid variables
-  integer, allocatable, dimension(:,:) :: mesh, nmesh, cbuf, rbuf
+  integer, allocatable, dimension(:,:) :: mesh, cbuf, rbuf, wbuf
   !Vacancy list
   integer, allocatable, dimension(:,:) :: vaclist, vcl_lft, vcl_rgt, vcl_up, vcl_dwn, vac2move, vcl_still
 
@@ -43,25 +43,35 @@ program marble
   dims(:) = 0
   call MPI_Dims_create(commsize, 2, dims, ierror)
   periods(:) = .true.
-  call MPI_Cart_create(MPI_COMM_WORLD, 2, dims, periods, 0, MPI_COMM_2D, ierror)
+  call MPI_Cart_create(MPI_COMM_WORLD, 2, dims, periods, .true., MPI_COMM_2D, ierror)
   call MPI_Comm_rank(MPI_COMM_2D, rank, ierror)
   !Get directions in up/down
   call MPI_Cart_shift(MPI_COMM_2D, 0, 1, up, down, ierror)
   !Get directions in left/right
   call MPI_Cart_shift(MPI_COMM_2D, 1, 1,left,right, ierror)
 
+  !Check grid decomposition
+  if ((mod(nsize,dims(1))+mod(nsize,dims(2))) > 0) then
+    if (rank.eq.0) then
+      write(0,*)'Grid decomposition is not possible with grid size: ',nsize,' and decomposition: ',nrow,'x',ncol
+      write(0,*)'Please try to run your code with different number ot processes'
+    end if
+    call MPI_Finalize(ierror)
+  end if
   !Calculate the local mesh size
   nrow = nsize / dims(1)
   ncol = nsize / dims(2)
 
-  !write(0,*)'Decomposition: ',nrow,'x',ncol
+  if (rank.eq.0) then
+    write(0,*)'Decomposition: ',nrow,'x',ncol,'[',dims(1),',',dims(2),']'
+  end if
 
   !Create MPI types
   !Define new type COLUMN
-   call MPI_Type_contiguous(ncol+2, MPI_INTEGER, MPI_TYPE_COL, ierror)
+   call MPI_Type_contiguous(nrow+2, MPI_INTEGER, MPI_TYPE_COL, ierror)
    call MPI_Type_commit(MPI_TYPE_COL, ierror)
   !Define new type ROW
-   call MPI_Type_vector(nrow+2, 1, ncol+2, MPI_INTEGER, MPI_TYPE_ROW, ierror)
+   call MPI_Type_vector(ncol+2, 1, nrow+2, MPI_INTEGER, MPI_TYPE_ROW, ierror)
    call MPI_Type_commit(MPI_TYPE_ROW, ierror)
    !Define BLOCK type
    call MPI_Type_vector(ncol, nrow, nsize, MPI_INTEGER, MPI_BLOCK2, ierror)
@@ -76,7 +86,9 @@ program marble
 
   !Calculate possible maximal vacancies and allocate vaclist array
   maxvacnum = nint(nsize * nsize * pdvac * 4e0)
-  write(0,*)'vac size list: ', maxvacnum
+  if (rank.eq.0) then
+    write(0,*)'vac size list: ', maxvacnum
+  end if
 
   allocate(vaclist(4,maxvacnum))
   allocate(vcl_lft(4,maxvacnum))
@@ -91,20 +103,24 @@ program marble
   scounts(:) = 1
   do k = 1, commsize
     call MPI_Cart_coords(MPI_COMM_2D, k - 1, 2, crd, ierror)
-    i = crd(1)
-    j = crd(2)
-    displs(k) = (i* nsize * nrow + j* ncol)*4
-    !write(0,*)k-1, i, j, displs(k)
+    i = crd(1) ! nrow
+    j = crd(2) ! ncol
+    !displs(k) = (i* nsize * nrow + j* ncol)*4
+    displs(k) = (i * nrow + j * ncol * nsize)*4
+    !if (rank.eq.0) then
+    !  write(0,*)k-1, i, j, displs(k)
+    !end if
   end do
+  call MPI_Cart_coords(MPI_COMM_2D, rank, 2, crd, ierror)
 
   !Allocate memory
   allocate(mesh(0:nrow+1, 0:ncol+1))
-  allocate(nmesh(0:nrow+1, 0:ncol+1))
+  allocate(wbuf(nrow, ncol))
 
   !seed the random number generator
   call MC_init_random_seed(rank)
   !Initialize the grid
-  call MC_init_mesh(mesh(1:nrow, 1:ncol), vaclist, nvac, pdvac, pdratio)
+  call MC_init_mesh(mesh, vaclist, nvac, pdvac, pdratio)
 
   !Main iteration loop
   startTime = MPI_Wtime()
@@ -112,7 +128,8 @@ program marble
     !Generate velocities
     call MC_genvel(vaclist, nvac, vcl_lft, nvac_lft, vcl_rgt, nvac_rgt,&
      vcl_up, nvac_up, vcl_dwn, nvac_dwn, vcl_still, nvac_still)
-     !call print_vac_list(vaclist, nvac, 'all')
+
+     !call print_vac_list(vaclist, nvac, 'begin', mesh)
      !call print_vac_list(vcl_up, nvac_up, 'up')
      !call print_vac_list(vcl_dwn, nvac_dwn, 'down')
      !call print_vac_list(vcl_still, nvac_still, 'still')
@@ -129,6 +146,7 @@ program marble
     call MPI_Get_count(msg_status, MPI_INTEGER, rbuf_size, ierror)
     call MPI_Recv(rbuf, rbuf_size, MPI_INTEGER, down, 0, MPI_COMM_2D,&
       MPI_STATUS_IGNORE, ierror)
+    call MPI_Wait(req, MPI_STATUS_IGNORE, ierror)
     if (rbuf_size > 0) then
       call MC_update_vaclist(vcl_up, nvac_up, rbuf, rbuf_size/4)
     end if
@@ -143,8 +161,11 @@ program marble
     call MPI_Get_count(msg_status, MPI_INTEGER, rbuf_size, ierror)
     call MPI_Recv(rbuf, rbuf_size, MPI_INTEGER, up, 0, MPI_COMM_2D,&
       MPI_STATUS_IGNORE, ierror)
+    call MPI_Wait(req, MPI_STATUS_IGNORE, ierror)
     if (rbuf_size > 0) then
+      !call print_vac_list(   vcl_dwn, nvac_dwn, 'vcl_dwn', mesh)
       call MC_update_vaclist(vcl_dwn, nvac_dwn, rbuf, rbuf_size/4)
+      !call print_vac_list(   vcl_dwn, nvac_dwn, 'vcl_dwn', mesh)
     end if
 
 
@@ -158,8 +179,12 @@ program marble
     call MPI_Get_count(msg_status, MPI_INTEGER, rbuf_size, ierror)
     call MPI_Recv(rbuf, rbuf_size, MPI_INTEGER, right, 0, MPI_COMM_2D,&
       MPI_STATUS_IGNORE, ierror)
+    call MPI_Wait(req, MPI_STATUS_IGNORE, ierror)
     if (rbuf_size > 0) then
+      !call print_vac_list(   rbuf, rbuf_size/4, 'b lft', mesh)
+      !call print_vac_list(   vcl_lft, nvac_lft, 'vcl_lft', mesh)
       call MC_update_vaclist(vcl_lft, nvac_lft, rbuf, rbuf_size/4)
+      !call print_vac_list(   vcl_lft, nvac_lft, 'vcl_lft', mesh)
     end if
 
     call MC_select_boundary_vac(vcl_rgt, nvac_rgt, 'right', cbuf, nvacob)
@@ -172,7 +197,9 @@ program marble
     call MPI_Get_count(msg_status, MPI_INTEGER, rbuf_size, ierror)
     call MPI_Recv(rbuf, rbuf_size, MPI_INTEGER, left, 0, MPI_COMM_2D,&
       MPI_STATUS_IGNORE, ierror)
+    call MPI_Wait(req, MPI_STATUS_IGNORE, ierror)
     if (rbuf_size > 0) then
+      !call print_vac_list(   rbuf, rbuf_size/4, 'b rgt', mesh)
       call MC_update_vaclist(vcl_rgt, nvac_rgt, rbuf, rbuf_size/4)
     end if
 
@@ -181,7 +208,9 @@ program marble
     call MC_join_vac(vac2move, nvac2move, vcl_dwn, nvac_dwn, 'now')
     !Sort vacancy list
     call MC_sort_vclist(vac2move, nvac2move, 1)
-    call MC_Step(mesh(0:nrow+1, 0:ncol+1), vac2move, nvac2move)
+    !call print_vac_list(vac2move, nvac2move, 'u<->d', mesh)
+    !call MC_Step(mesh(0:nrow+1, 0:ncol+1), vac2move, nvac2move)
+    call MC_Step(mesh, vac2move, nvac2move)
 
     nvac = 0
     call MC_join_vac(vaclist, nvac, vac2move, nvac2move, 'now')
@@ -191,7 +220,9 @@ program marble
     call MC_join_vac(vac2move, nvac2move, vcl_rgt, nvac_rgt, 'now')
     !Sort vacancy list
     call MC_sort_vclist(vac2move, nvac2move, 1)
-    call MC_Step(mesh(0:nrow+1, 0:ncol+1), vac2move, nvac2move)
+
+    !call MC_Step(mesh(0:nrow+1, 0:ncol+1), vac2move, nvac2move)
+    call MC_Step(mesh, vac2move, nvac2move)
 
     !do i = 0, nrow+1
     !  write(0,'(I3,A1,<ncol+2>I1)')i,':',(mesh(i,j),j=0,ncol+1)
@@ -200,12 +231,16 @@ program marble
     call MC_join_vac(vaclist, nvac, vac2move, nvac2move, 'now')
     call MC_join_vac(vaclist, nvac, vcl_still, nvac_still, 'now')
 
+    !call print_vac_list(vaclist, nvac, 'end  ', mesh)
+
     if (mod(it, nout).eq.0) then
       call MPI_Reduce(nvac, totnvac, 1, MPI_INTEGER, MPI_SUM, 0, MPI_COMM_2D, ierror)
       if (rank.eq.0) then
         write(6,'(A7,I10,A8,I4)')' step = ',it,'nvac = ',totnvac
       end if
-      call write_out_mesh(mesh(1:nrow, 1:ncol))
+      !wbuf(1:nrow,1:ncol) = abs(mod(crd(1), 2)-mod(crd(2), 2))+1
+      wbuf(1:nrow,1:ncol) = mesh(1:nrow, 1:ncol)
+      call write_out_mesh(wbuf)
     end if
   end do
   endTime = MPI_Wtime()
@@ -214,7 +249,7 @@ program marble
   end if
   !Deallocate the memory
   deallocate(mesh)
-  deallocate(nmesh)
+  deallocate(wbuf)
   deallocate(cbuf)
   deallocate(rbuf)
   deallocate(scounts)

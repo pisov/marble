@@ -68,16 +68,17 @@ module utils
   end do
   end subroutine read_input_file
 
-  subroutine print_vac_list(vaclist, nvac, listname)
+  subroutine print_vac_list(vaclist, nvac, listname, mesh)
     implicit none
     integer, dimension(4,maxvacnum), intent(in) :: vaclist
     integer, intent(in) :: nvac
     character(len=*) :: listname
+    integer, dimension(0:nrow+1, 0:ncol+1) :: mesh
 
     integer :: i
 
     do i = 1, nvac
-        write(0,'(A1,A5,A10,I3,A1,I3,A2,I3,A2,I3,A1)')'[',listname,'] step: ',it,':',i,' (',vaclist(1, i),', ',vaclist(2, i),')'
+        write(0,'(I3,A3,A1,A5,A10,I3,A1,I3,A2,I3,A2,I3,A4,I1)')rank,' : ','[',listname,'] step: ',it,':',i,' (',vaclist(1, i),', ',vaclist(2, i),') : ',mesh(vaclist(1, i), vaclist(2, i))
     end do
 
   end subroutine print_vac_list

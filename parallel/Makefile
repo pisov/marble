@@ -1,5 +1,6 @@
 OBJ=marble.o mc.o utils.o globvars.o
 CFLAGS=-O3
+#CFLAGS=-g -traceback
 
 FC=mpif90
 EXE=marble.x
