@@ -6,12 +6,18 @@ implicit none
   integer :: i, j
   integer :: fh, cval,thresh
   integer :: cr, cg, cb
+  character(len=32) :: filename
 
 
   thresh = 255
   fh = 15
   call read_input_file(inpt_filename)
-  open(fh, file=chkp_filename, form='binary')
+  if (iargc().eq.0) then
+    open(fh, file=chkp_filename, form='binary')
+  else
+    call getarg(1, filename)
+    open(fh, file=trim(filename), form='binary')
+  end if
   write(6,'(A2)')'P3'
   write(6,'(2I9)')nsize,nsize
   write(6,'(I3)')thresh

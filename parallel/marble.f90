@@ -18,6 +18,8 @@ program marble
 
   integer :: i, j, k, ierror, req, msg_status, nvac, nvacob, rbuf_size, nvac2move, nvac_still
   integer :: nvac_lft, nvac_rgt, nvac_up, nvac_dwn, totnvac
+  integer(kind=8) :: cnt
+  character(len=32) :: write_fmt, filename
 
   double precision :: startTime, endTime
 
@@ -30,6 +32,9 @@ program marble
   if (rank.eq.0) then
     call read_input_file(inpt_filename)
   end if
+
+  !Set write format
+  write(write_fmt,'(A2,I0,A9)')'(A',len_trim(chkp_filename),',A1,I0.6)'
 
   !Distribute the initial variables
   call MPI_Bcast(nit,     1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierror)
@@ -124,7 +129,10 @@ program marble
 
   !Main iteration loop
   startTime = MPI_Wtime()
-  do it = 1, nit
+
+  !File writes counter initialization
+  cnt = 1
+  do it = 0, nit
     !Generate velocities
     call MC_genvel(vaclist, nvac, vcl_lft, nvac_lft, vcl_rgt, nvac_rgt,&
      vcl_up, nvac_up, vcl_dwn, nvac_dwn, vcl_still, nvac_still)
@@ -236,11 +244,13 @@ program marble
     if (mod(it, nout).eq.0) then
       call MPI_Reduce(nvac, totnvac, 1, MPI_INTEGER, MPI_SUM, 0, MPI_COMM_2D, ierror)
       if (rank.eq.0) then
-        write(6,'(A7,I10,A8,I4)')' step = ',it,'nvac = ',totnvac
+        write(6,'(A7,I10,A8,I10)')' step = ',it,'nvac = ',totnvac
       end if
       !wbuf(1:nrow,1:ncol) = abs(mod(crd(1), 2)-mod(crd(2), 2))+1
+      write(filename, write_fmt)chkp_filename,'-',cnt
+      cnt = cnt + 1
       wbuf(1:nrow,1:ncol) = mesh(1:nrow, 1:ncol)
-      call write_out_mesh(wbuf)
+      call write_out_mesh(wbuf, filename)
     end if
   end do
   endTime = MPI_Wtime()
