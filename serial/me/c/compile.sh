@@ -1,5 +1,7 @@
 #!/bin/bash
 
+mkdir -p data
+
 echo -n Compiling ... 
 
 gfortran -O3 -c utils.f90
