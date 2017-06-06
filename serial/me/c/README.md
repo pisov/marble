@@ -1,5 +1,5 @@
 Serial version of the program, where the processing of the data is NOT made during the simulation. 
-Vacancies are in seperate array. This implementation does not use the SPRNG library.
+Vacancies are in seperate array. This implementation uses the fortran function random_number for generating random numbers.
 
 --------------------------------------------------------------------------------------------------
 
