@@ -3,30 +3,28 @@ module mc
   implicit none
   contains
   subroutine MC_init_mesh(mesh, vaclist, nvac, pdvac, pdratio)
-    integer, dimension(:, :), intent(inout) :: mesh
-    integer, dimension(:, :), intent(out) :: vaclist
+    integer, allocatable, dimension(:, :), intent(inout) :: mesh
+    integer, allocatable, dimension(:, :), intent(inout) :: vaclist
     integer, intent(out) :: nvac
     double precision, intent(in) :: pdvac, pdratio
 
-    integer :: nrow, ncol, i, j, vidx
+    integer :: i, j, vidx
     double precision :: prob
 
-    nrow = size(mesh, 1)
-    ncol = size(mesh, 2)
     nvac = size(vaclist, 2)
 
     vidx = 1
     vaclist(1, :) = -1
     vaclist(2, :) = -1
 
-    do j = 1, nrow
-      do i = 1, ncol
+    do j = 1, ncol
+      do i = 1, nrow
         call random_number(prob)
         if ((prob.lt.pdvac).and.(vidx.le.nvac)) then
           mesh(i, j) = type_vac
           vaclist(1, vidx) = i
           vaclist(2, vidx) = j
-          !write(0,'(4I3)')vidx,i,j,mesh(i, j)
+          !write(0,'(A6,I3,A3,4I3)')'Init: ', rank, ' : ', vidx, i, j, mesh(i, j)
           vidx = vidx + 1
         else
           call random_number(prob)
@@ -41,11 +39,12 @@ module mc
     nvac = vidx - 1
   end subroutine MC_init_mesh
 
-  subroutine MC_genvel(vaclist, nvac,vcl_lft, nvac_lft, vcl_rgt, nvac_rgt,&
+  subroutine MC_genvel(mesh,vaclist, nvac,vcl_lft, nvac_lft, vcl_rgt, nvac_rgt,&
       vcl_up, nvac_up, vcl_dwn, nvac_dwn, vcl_still, nvac_still)
-    integer, dimension(:, :), intent(inout) ::  vaclist, vcl_lft, vcl_rgt, vcl_up, vcl_dwn, vcl_still
+    integer, allocatable, dimension(:, :), intent(inout) ::  vaclist, vcl_lft, vcl_rgt, vcl_up, vcl_dwn, vcl_still
     integer, intent(out) :: nvac_lft, nvac_rgt, nvac_up, nvac_dwn, nvac_still
     integer, intent(in) :: nvac
+    integer, allocatable, dimension(:, :), intent(inout) :: mesh
 
     integer :: vidx, vx, vy, ii, jj
     double precision :: p
@@ -60,6 +59,56 @@ module mc
       ii = vaclist(1, vidx)
       jj = vaclist(2, vidx)
 
+      call random_number(p)
+      if (p.lt.0.857)then
+      call random_number(p)
+      if(p.lt.0.25)then
+         if( mesh(ii-1,jj).eq.mesh(ii+1,jj))then
+
+        vx = 0
+        vy =  -1
+        nvac_lft = nvac_lft + 1
+        vcl_lft(1, nvac_lft) = ii
+        vcl_lft(2, nvac_lft) = jj
+        vcl_lft(3, nvac_lft) = vx
+        vcl_lft(4, nvac_lft) = vy
+         endif
+      elseif(p.lt.0.50)then
+         if( mesh(ii-1,jj).eq.mesh(ii+1,jj))then
+
+        vx =  0
+        vy =  1
+        nvac_rgt = nvac_rgt + 1
+        vcl_rgt(1, nvac_rgt) = ii
+        vcl_rgt(2, nvac_rgt) = jj
+        vcl_rgt(3, nvac_rgt) = vx
+        vcl_rgt(4, nvac_rgt) = vy
+         endif
+      elseif(p.lt.0.75)then
+         if( mesh(ii,jj-1).eq.mesh(ii,jj+1))then
+
+        vx =  -1
+        vy =  0
+        nvac_up = nvac_up + 1
+        vcl_up(1, nvac_up) = ii
+        vcl_up(2, nvac_up) = jj
+        vcl_up(3, nvac_up) = vx
+        vcl_up(4, nvac_up) = vy
+         endif
+      else
+         if( mesh(ii,jj-1).eq.mesh(ii,jj+1))then
+
+        vx = 1
+        vy = 0
+        nvac_dwn = nvac_dwn + 1
+        vcl_dwn(1, nvac_dwn) = ii
+        vcl_dwn(2, nvac_dwn) = jj
+        vcl_dwn(3, nvac_dwn) = vx
+        vcl_dwn(4, nvac_dwn) = vy
+         endif
+      endif
+
+      else
       call random_number(p)
       !p = p*0.4d0 + 0.4d0
       !write(0,*)'process',ii,jj,p
@@ -104,13 +153,14 @@ module mc
         vcl_still(3, nvac_still) = vx
         vcl_still(4, nvac_still) = vy
       end if
+      end if
     end do
 
   end subroutine MC_genvel
 
   subroutine MC_Step(mesh, vaclist, nvac)
-    integer, dimension(0:nrow+1, 0:ncol+1), intent(inout) :: mesh
-    integer, dimension(4, maxvacnum), intent(inout) :: vaclist
+    integer, allocatable, dimension(:, :), intent(inout) :: mesh
+    integer, allocatable, dimension(:, :), intent(inout) :: vaclist    
     integer, intent(in) :: nvac
 
 
@@ -131,25 +181,25 @@ module mc
         vaclist(1, vidx) = ii
         vaclist(2, vidx) = jj
 
-        !write(0,'(A2 ,I3   ,A2 ,I1        ,A1 ,I3,A2  ,I3,A5     ,I1          ,A1 ,I3,A2  ,I3,A1)')&
-        !          ' [',vidx,'] ',mesh(i, j),'(',i ,', ',j ,') -> ',mesh(ii, jj),'(',ii,', ',jj,')'
+        !write(0,'(I4,A3,A2 ,I3   ,A2 ,I1        ,A1 ,I3,A2  ,I3,A5     ,I1          ,A1 ,I3,A2  ,I3,A1)')&
+        !          rank,' : ',' [',vidx,'] ',mesh(i, j),'(',i ,', ',j ,') -> ',mesh(ii, jj),'(',ii,', ',jj,')'
         !swap the elements
 
         swap = mesh(ii, jj)
         mesh(ii, jj) = mesh(i, j)
         mesh(i, j) = swap
       else
-        !write(0,'(A2 ,I3   ,A2 ,I1        ,A1 ,I3,A2  ,I3,A5     ,I1          ,A1 ,I3,A2  ,I3,A1)')&
-        !          's[',vidx,'] ',mesh(i, j),'(',i ,', ',j ,') -> ',mesh(ii, jj),'(',ii,', ',jj,')'
+        !write(0,'(I4,A3,A2 ,I3   ,A2 ,I1        ,A1 ,I3,A2  ,I3,A5     ,I1          ,A1 ,I3,A2  ,I3,A1)')&
+        !          rank,' : ','s[',vidx,'] ',mesh(i, j),'(',i ,', ',j ,') -> ',mesh(ii, jj),'(',ii,', ',jj,')'
       end if
     end do
 
   end subroutine MC_Step
 
   subroutine MC_update_vaclist(vaclist, nvac, buf, buf_size)
-    integer, dimension(:, :), intent(inout) :: vaclist
+    integer, allocatable, dimension(:, :), intent(inout) :: vaclist
     integer, intent(inout) :: nvac
-    integer, dimension(:, :), intent(in) :: buf
+    integer, allocatable, dimension(:, :), intent(in) :: buf
     integer, intent(in) :: buf_size
 
     integer :: i
@@ -163,7 +213,7 @@ module mc
 
   subroutine MC_sort_vclist(vclist, nvac, row_id)
     implicit none
-    integer, dimension(:,:), intent(inout) :: vclist
+    integer, allocatable, dimension(:,:), intent(inout) :: vclist
     integer, intent(in) :: nvac, row_id
 
     integer :: idx, i
@@ -179,10 +229,10 @@ module mc
 
   subroutine MC_select_boundary_vac(vclist, nvac, direction, buf, nvacob)
     implicit none
-    integer, dimension(:,:), intent(in) :: vclist
+    integer, allocatable, dimension(:,:), intent(in) :: vclist
     integer, intent(in) :: nvac
     character(len=*), intent(in) :: direction
-    integer, dimension(:,:), intent(out) :: buf
+    integer, allocatable, dimension(:,:), intent(inout) :: buf
     integer, intent(out) :: nvacob
 
     integer :: i, id, side_id, offset
@@ -218,11 +268,12 @@ module mc
       end if
     end do
   end subroutine MC_select_boundary_vac
+
   subroutine MC_join_vac(vaclist, nvac, vac_sub_list, nvac_subc, direction)
     implicit none
-    integer, dimension(:,:), intent(inout) :: vaclist
+    integer, allocatable, dimension(:,:), intent(inout) :: vaclist
     integer, intent(inout) :: nvac
-    integer, dimension(:,:), intent(inout) :: vac_sub_list
+    integer, allocatable, dimension(:,:), intent(inout) :: vac_sub_list
     integer, intent(in) :: nvac_subc
     character(len=*), intent(in) :: direction
 
@@ -258,7 +309,8 @@ module mc
 
     call system_clock(COUNT=clock)
 
-    seed = clock + rank * 37 * (/ (i - 1, i = 1, n) /)
+    !seed = clock + rank * 37 * (/ (i - 1, i = 1, n) /)
+    seed = rank * 37 * (/ (i - 1, i = 1, n) /)
     call random_seed(PUT = seed)
 
     deallocate(seed)
