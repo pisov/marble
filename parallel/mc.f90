@@ -39,11 +39,12 @@ module mc
     nvac = vidx - 1
   end subroutine MC_init_mesh
 
-  subroutine MC_genvel(vaclist, nvac,vcl_lft, nvac_lft, vcl_rgt, nvac_rgt,&
+  subroutine MC_genvel(mesh,vaclist, nvac,vcl_lft, nvac_lft, vcl_rgt, nvac_rgt,&
       vcl_up, nvac_up, vcl_dwn, nvac_dwn, vcl_still, nvac_still)
     integer, allocatable, dimension(:, :), intent(inout) ::  vaclist, vcl_lft, vcl_rgt, vcl_up, vcl_dwn, vcl_still
     integer, intent(out) :: nvac_lft, nvac_rgt, nvac_up, nvac_dwn, nvac_still
     integer, intent(in) :: nvac
+    integer, allocatable, dimension(:, :), intent(inout) :: mesh
 
     integer :: vidx, vx, vy, ii, jj
     double precision :: p
@@ -58,6 +59,56 @@ module mc
       ii = vaclist(1, vidx)
       jj = vaclist(2, vidx)
 
+      call random_number(p)
+      if (p.lt.0.857)then
+      call random_number(p)
+      if(p.lt.0.25)then
+         if( mesh(ii-1,jj).eq.mesh(ii+1,jj))then
+
+        vx = 0
+        vy =  -1
+        nvac_lft = nvac_lft + 1
+        vcl_lft(1, nvac_lft) = ii
+        vcl_lft(2, nvac_lft) = jj
+        vcl_lft(3, nvac_lft) = vx
+        vcl_lft(4, nvac_lft) = vy
+         endif
+      elseif(p.lt.0.50)then
+         if( mesh(ii-1,jj).eq.mesh(ii+1,jj))then
+
+        vx =  0
+        vy =  1
+        nvac_rgt = nvac_rgt + 1
+        vcl_rgt(1, nvac_rgt) = ii
+        vcl_rgt(2, nvac_rgt) = jj
+        vcl_rgt(3, nvac_rgt) = vx
+        vcl_rgt(4, nvac_rgt) = vy
+         endif
+      elseif(p.lt.0.75)then
+         if( mesh(ii,jj-1).eq.mesh(ii,jj+1))then
+
+        vx =  -1
+        vy =  0
+        nvac_up = nvac_up + 1
+        vcl_up(1, nvac_up) = ii
+        vcl_up(2, nvac_up) = jj
+        vcl_up(3, nvac_up) = vx
+        vcl_up(4, nvac_up) = vy
+         endif
+      else
+         if( mesh(ii,jj-1).eq.mesh(ii,jj+1))then
+
+        vx = 1
+        vy = 0
+        nvac_dwn = nvac_dwn + 1
+        vcl_dwn(1, nvac_dwn) = ii
+        vcl_dwn(2, nvac_dwn) = jj
+        vcl_dwn(3, nvac_dwn) = vx
+        vcl_dwn(4, nvac_dwn) = vy
+         endif
+      endif
+
+      else
       call random_number(p)
       !p = p*0.4d0 + 0.4d0
       !write(0,*)'process',ii,jj,p
@@ -101,6 +152,7 @@ module mc
         vcl_still(2, nvac_still) = jj
         vcl_still(3, nvac_still) = vx
         vcl_still(4, nvac_still) = vy
+      end if
       end if
     end do
 
