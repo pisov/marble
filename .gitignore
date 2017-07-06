@@ -1,0 +1,10 @@
+*.x
+*.o
+a.out
+slurm*
+*.mod
+*.log
+*.err
+*.out
+marble.chkp*
+run/*

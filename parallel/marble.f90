@@ -134,7 +134,7 @@ program marble
   cnt = 1
   do it = 0, nit
     !Generate velocities
-    call MC_genvel(vaclist, nvac, vcl_lft, nvac_lft, vcl_rgt, nvac_rgt,&
+    call MC_genvel(mesh, vaclist, nvac, vcl_lft, nvac_lft, vcl_rgt, nvac_rgt,&
      vcl_up, nvac_up, vcl_dwn, nvac_dwn, vcl_still, nvac_still)
 
      !call print_vac_list(vaclist, nvac, 'begin', mesh)

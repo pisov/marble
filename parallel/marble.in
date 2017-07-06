@@ -1,6 +1,6 @@
-nit = 300 
-nout = 100
+nit = 5000000 
+nout = 100000
 Temp = 1.0
-nsize = 16
+nsize = 300
 pdvac=0.05
 pdratio=0.5
