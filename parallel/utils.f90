@@ -69,10 +69,12 @@ module utils
            read(buffer, *, iostat=ios) nout
         case ('Temp')
             read(buffer, *, iostat=ios) Temp
-        case ('pdvac')
-            read(buffer, *, iostat=ios) pdvac
-        case ('pdratio')
-            read(buffer, *, iostat=ios) pdratio
+        case ('pbvac')
+            read(buffer, *, iostat=ios) pbvac
+        case ('pbratio')
+            read(buffer, *, iostat=ios) pbratio
+        case ('pbfrmv')
+            read(buffer, *, iostat=ios) pbfrmv
         case ('nsize')
             read(buffer, *, iostat=ios) nsize
         case default

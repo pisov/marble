@@ -2,11 +2,11 @@ module mc
   use globvars
   implicit none
   contains
-  subroutine MC_init_mesh(mesh, vaclist, nvac, pdvac, pdratio)
+  subroutine MC_init_mesh(mesh, vaclist, nvac, pbvac, pbratio)
     integer, allocatable, dimension(:, :), intent(inout) :: mesh
     integer, allocatable, dimension(:, :), intent(inout) :: vaclist
     integer, intent(out) :: nvac
-    double precision, intent(in) :: pdvac, pdratio
+    double precision, intent(in) :: pbvac, pbratio
 
     integer :: i, j, vidx
     double precision :: prob
@@ -20,7 +20,7 @@ module mc
     do j = 1, ncol
       do i = 1, nrow
         call random_number(prob)
-        if ((prob.lt.pdvac).and.(vidx.le.nvac)) then
+        if ((prob.lt.pbvac).and.(vidx.le.nvac)) then
           mesh(i, j) = type_vac
           vaclist(1, vidx) = i
           vaclist(2, vidx) = j
@@ -28,7 +28,7 @@ module mc
           vidx = vidx + 1
         else
           call random_number(prob)
-          if(prob.lt.pdratio) then
+          if(prob.lt.pbratio) then
             mesh(i, j) = type_red
           else
             mesh(i, j) = type_blue
@@ -59,70 +59,67 @@ module mc
       ii = vaclist(1, vidx)
       jj = vaclist(2, vidx)
 
-      call random_number(p)
-      !p = p*0.4d0 + 0.4d0
-      !write(0,*)'process',ii,jj,p
-      if (p.lt.0.16666666666) then
-        vx = 0
-        vy =  -1
-        nvac_lft = nvac_lft + 1
-        vcl_lft(1, nvac_lft) = ii
-        vcl_lft(2, nvac_lft) = jj
-        vcl_lft(3, nvac_lft) = vx
-        vcl_lft(4, nvac_lft) = vy
-      else if (p.lt.0.33333333333) then
-        vx =  0
-        vy =  1
-        nvac_rgt = nvac_rgt + 1
-        vcl_rgt(1, nvac_rgt) = ii
-        vcl_rgt(2, nvac_rgt) = jj
-        vcl_rgt(3, nvac_rgt) = vx
-        vcl_rgt(4, nvac_rgt) = vy
-      else if (p.lt.0.5) then
-        vx = 1
-        vy = 0
-        nvac_dwn = nvac_dwn + 1
-        vcl_dwn(1, nvac_dwn) = ii
-        vcl_dwn(2, nvac_dwn) = jj
-        vcl_dwn(3, nvac_dwn) = vx
-        vcl_dwn(4, nvac_dwn) = vy
-      else if (p.lt.0.66666666666) then
-        vx =  -1
-        vy =  0
-        nvac_up = nvac_up + 1
-        vcl_up(1, nvac_up) = ii
-        vcl_up(2, nvac_up) = jj
-        vcl_up(3, nvac_up) = vx
-        vcl_up(4, nvac_up) = vy
-      else if (p.lt.0.83333333333) then
-        vx =  0
-        vy =  0
-        nvac_still = nvac_still + 1
-        vcl_still(1, nvac_still) = ii
-        vcl_still(2, nvac_still) = jj
-        vcl_still(3, nvac_still) = vx
-        vcl_still(4, nvac_still) = vy
+      call random_number(q)
+      if (q.lt.pbfrmv) then
+        call random_number(p)
+        if (p.lt.0.25) then
+          vx = 0
+          vy =  -1
+          nvac_lft = nvac_lft + 1
+          vcl_lft(1, nvac_lft) = ii
+          vcl_lft(2, nvac_lft) = jj
+          vcl_lft(3, nvac_lft) = vx
+          vcl_lft(4, nvac_lft) = vy
+        else if (p.lt.0.50) then
+          vx =  0
+          vy =  1
+          nvac_rgt = nvac_rgt + 1
+          vcl_rgt(1, nvac_rgt) = ii
+          vcl_rgt(2, nvac_rgt) = jj
+          vcl_rgt(3, nvac_rgt) = vx
+          vcl_rgt(4, nvac_rgt) = vy
+        else if (p.lt.0.75) then
+          vx = 1
+          vy = 0
+          nvac_dwn = nvac_dwn + 1
+          vcl_dwn(1, nvac_dwn) = ii
+          vcl_dwn(2, nvac_dwn) = jj
+          vcl_dwn(3, nvac_dwn) = vx
+          vcl_dwn(4, nvac_dwn) = vy
+        else
+          vx =  -1
+          vy =  0
+          nvac_up = nvac_up + 1
+          vcl_up(1, nvac_up) = ii
+          vcl_up(2, nvac_up) = jj
+          vcl_up(3, nvac_up) = vx
+          vcl_up(4, nvac_up) = vy
+        end if
       else
         ! Move vacancies toward sametype
-        if (mesh(ii-1, jj).eq.mesh(ii+1, jj)) then
+        vx = 0
+        vy = 0
+        if ((mesh(ii-1, jj).eq.mesh(ii+1, jj)).and.(mesh(ii-1,jj).ne.type_vac)) then
           vx = 1
         else
           vx = 0
         end if
-        if (mesh(ii, jj-1).eq.mesh(ii, jj+1)) then
+
+        if ((mesh(ii, jj-1).eq.mesh(ii, jj+1)).and.(mesh(ii, jj-1).ne.type_vac)) then
           vy = 1
         else
           vy = 0
         end if
-
+      
         if ( (vx*vy).eq.1 ) then
           call random_number(q)
           if (q.le.0.5) then
             vy = 0
           else
-            vx = 1
+            vx = 0
           end if
         end if
+
         if(vx.eq.1) then
           call random_number(q)
           if (q.le.0.5) then
@@ -142,7 +139,7 @@ module mc
             vcl_up(3, nvac_up) = vx
             vcl_up(4, nvac_up) = vy    
           end if
-        else
+        else if (vx.eq.1) then 
           call random_number(q)
           if (q.le.0.5) then
             vx =  0
@@ -154,13 +151,21 @@ module mc
             vcl_rgt(4, nvac_rgt) = vy  
           else
             vx = 0
-           vy =  -1
-           nvac_lft = nvac_lft + 1
-           vcl_lft(1, nvac_lft) = ii
-           vcl_lft(2, nvac_lft) = jj
-           vcl_lft(3, nvac_lft) = vx
-           vcl_lft(4, nvac_lft) = vy
+            vy =  -1
+            nvac_lft = nvac_lft + 1
+            vcl_lft(1, nvac_lft) = ii
+            vcl_lft(2, nvac_lft) = jj
+            vcl_lft(3, nvac_lft) = vx
+            vcl_lft(4, nvac_lft) = vy
           end if
+        else
+          vx =  0
+          vy =  0
+          nvac_still = nvac_still + 1
+          vcl_still(1, nvac_still) = ii
+          vcl_still(2, nvac_still) = jj
+          vcl_still(3, nvac_still) = vx
+          vcl_still(4, nvac_still) = vy
         end if
       end if
     end do

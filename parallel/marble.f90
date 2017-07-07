@@ -41,8 +41,8 @@ program marble
   call MPI_Bcast(nout,    1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierror)
   call MPI_Bcast(nsize,   1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierror)
   call MPI_Bcast(Temp,    1, MPI_DOUBLE_PRECISION,  0, MPI_COMM_WORLD, ierror)
-  call MPI_Bcast(pdvac,   1, MPI_DOUBLE_PRECISION,  0, MPI_COMM_WORLD, ierror)
-  call MPI_Bcast(pdratio, 1, MPI_DOUBLE_PRECISION,  0, MPI_COMM_WORLD, ierror)
+  call MPI_Bcast(pbvac,   1, MPI_DOUBLE_PRECISION,  0, MPI_COMM_WORLD, ierror)
+  call MPI_Bcast(pbratio, 1, MPI_DOUBLE_PRECISION,  0, MPI_COMM_WORLD, ierror)
 
   !Create Cartesian 2D topology
   dims(:) = 0
@@ -90,7 +90,7 @@ program marble
   allocate(displs(dims(1)*dims(2)))
 
   !Calculate possible maximal vacancies and allocate vaclist array
-  maxvacnum = nint(nsize * nsize * pdvac * 4e0)
+  maxvacnum = nint(nsize * nsize * pbvac * 4e0)
   if (rank.eq.0) then
     write(0,*)'vac size list: ', maxvacnum
   end if
@@ -125,13 +125,13 @@ program marble
   !seed the random number generator
   call MC_init_random_seed(rank)
   !Initialize the grid
-  call MC_init_mesh(mesh, vaclist, nvac, pdvac, pdratio)
+  call MC_init_mesh(mesh, vaclist, nvac, pbvac, pbratio)
 
   !Main iteration loop
   startTime = MPI_Wtime()
 
   !File writes counter initialization
-  cnt = 1
+  cnt = 0
   do it = 0, nit
     !Generate velocities
     call MC_genvel(mesh, vaclist, nvac, vcl_lft, nvac_lft, vcl_rgt, nvac_rgt,&
@@ -232,9 +232,11 @@ program marble
     !call MC_Step(mesh(0:nrow+1, 0:ncol+1), vac2move, nvac2move)
     call MC_Step(mesh, vac2move, nvac2move)
 
+    !write(0,'(A12)')'------------'
     !do i = 0, nrow+1
     !  write(0,'(I3,A1,<ncol+2>I1)')i,':',(mesh(i,j),j=0,ncol+1)
     !end do
+    !write(0,'(A12)')'------------'
 
     call MC_join_vac(vaclist, nvac, vac2move, nvac2move, 'now')
     call MC_join_vac(vaclist, nvac, vcl_still, nvac_still, 'now')

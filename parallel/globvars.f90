@@ -21,9 +21,10 @@ module globvars
   integer :: nsize = 128, ncol, nrow, maxvacnum
   !The Temperature of the sample
   !Total energy of the sample
-  !pdvac - probability density of vacancies
-  !pdratio - probability dencity ratio between type I and type II particles
-  double precision :: Temp = 0.d0, Energy, pdvac = 0.01d0, pdratio = 0.5d0
+  !pbvac - probability density of vacancies
+  !pbratio - probability dencity ratio between type I and type II particles
+  double precision :: Temp = 0.d0, Energy, pbvac = 0.01d0, pbratio = 0.5d0
+  double precision :: pbfrmv = 0.1d0
 
   !MPI specific variables
   !commsize - size of MPI comunivator (number of processes)
