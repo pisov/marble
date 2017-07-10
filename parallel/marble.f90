@@ -43,6 +43,7 @@ program marble
   call MPI_Bcast(Temp,    1, MPI_DOUBLE_PRECISION,  0, MPI_COMM_WORLD, ierror)
   call MPI_Bcast(pbvac,   1, MPI_DOUBLE_PRECISION,  0, MPI_COMM_WORLD, ierror)
   call MPI_Bcast(pbratio, 1, MPI_DOUBLE_PRECISION,  0, MPI_COMM_WORLD, ierror)
+  call MPI_Bcast(pbfrmv,  1, MPI_DOUBLE_PRECISION,  0, MPI_COMM_WORLD, ierror)
 
   !Create Cartesian 2D topology
   dims(:) = 0
@@ -137,10 +138,10 @@ program marble
     call MC_genvel(mesh, vaclist, nvac, vcl_lft, nvac_lft, vcl_rgt, nvac_rgt,&
      vcl_up, nvac_up, vcl_dwn, nvac_dwn, vcl_still, nvac_still)
 
-     !call print_vac_list(vaclist, nvac, 'begin', mesh)
-     !call print_vac_list(vcl_up, nvac_up, 'up')
-     !call print_vac_list(vcl_dwn, nvac_dwn, 'down')
-     !call print_vac_list(vcl_still, nvac_still, 'still')
+    !call print_vac_list(vaclist, nvac, 'begin', mesh)
+    !call print_vac_list(vcl_up, nvac_up, 'up', mesh)
+    !call print_vac_list(vcl_dwn, nvac_dwn, 'down', mesh)
+    !call print_vac_list(vcl_still, nvac_still, 'still', mesh)
 
     !copy boundaries
 
@@ -171,9 +172,9 @@ program marble
       MPI_STATUS_IGNORE, ierror)
     call MPI_Wait(req, MPI_STATUS_IGNORE, ierror)
     if (rbuf_size > 0) then
-      !call print_vac_list(   vcl_dwn, nvac_dwn, 'vcl_dwn', mesh)
+      !call print_vac_list(   vcl_dwn, nvac_dwn, 'v_d_bef', mesh)
       call MC_update_vaclist(vcl_dwn, nvac_dwn, rbuf, rbuf_size/4)
-      !call print_vac_list(   vcl_dwn, nvac_dwn, 'vcl_dwn', mesh)
+      !call print_vac_list(   vcl_dwn, nvac_dwn, 'v_d_aft', mesh)
     end if
 
 
@@ -211,35 +212,38 @@ program marble
       call MC_update_vaclist(vcl_rgt, nvac_rgt, rbuf, rbuf_size/4)
     end if
 
+
+!    write(0,'(A12)')'------------'
+!    do i = 0, nrow+1
+!      write(0,'(I4,A1,I2,A1,I3,A1,<ncol+2>I1)')cnt,':',rank,':',i,':',(mesh(i,j),j=0,ncol+1)
+!    end do
+!    write(0,'(A12)')'------------'
+
     nvac2move = 0
-    call MC_join_vac(vac2move, nvac2move, vcl_up, nvac_up, 'now')
-    call MC_join_vac(vac2move, nvac2move, vcl_dwn, nvac_dwn, 'now')
+    call MC_join_vac(vac2move, nvac2move, vcl_up,  nvac_up)
+    call MC_join_vac(vac2move, nvac2move, vcl_dwn, nvac_dwn)
     !Sort vacancy list
     call MC_sort_vclist(vac2move, nvac2move, 1)
     !call print_vac_list(vac2move, nvac2move, 'u<->d', mesh)
-    !call MC_Step(mesh(0:nrow+1, 0:ncol+1), vac2move, nvac2move)
-    call MC_Step(mesh, vac2move, nvac2move)
-
     nvac = 0
-    call MC_join_vac(vaclist, nvac, vac2move, nvac2move, 'now')
+    call MC_Step(mesh, vac2move, nvac2move, vaclist, nvac)
+
 
     nvac2move = 0
-    call MC_join_vac(vac2move, nvac2move, vcl_lft, nvac_lft, 'now')
-    call MC_join_vac(vac2move, nvac2move, vcl_rgt, nvac_rgt, 'now')
+    call MC_join_vac(vac2move, nvac2move, vcl_lft, nvac_lft)
+    call MC_join_vac(vac2move, nvac2move, vcl_rgt, nvac_rgt)
     !Sort vacancy list
     call MC_sort_vclist(vac2move, nvac2move, 1)
 
-    !call MC_Step(mesh(0:nrow+1, 0:ncol+1), vac2move, nvac2move)
-    call MC_Step(mesh, vac2move, nvac2move)
+    call MC_Step(mesh, vac2move, nvac2move, vaclist, nvac)
 
     !write(0,'(A12)')'------------'
     !do i = 0, nrow+1
-    !  write(0,'(I3,A1,<ncol+2>I1)')i,':',(mesh(i,j),j=0,ncol+1)
+    !  write(0,'(I4,A1,I2,A1,I3,A1,<ncol+2>I1)')cnt,':',rank,':',i,':',(mesh(i,j),j=0,ncol+1)
     !end do
     !write(0,'(A12)')'------------'
 
-    call MC_join_vac(vaclist, nvac, vac2move, nvac2move, 'now')
-    call MC_join_vac(vaclist, nvac, vcl_still, nvac_still, 'now')
+    call MC_join_vac(vaclist, nvac, vcl_still, nvac_still)
 
     !call print_vac_list(vaclist, nvac, 'end  ', mesh)
 

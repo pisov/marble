@@ -172,13 +172,15 @@ module mc
 
   end subroutine MC_genvel
 
-  subroutine MC_Step(mesh, vaclist, nvac)
+  subroutine MC_Step(mesh, vaclist, nvac, vaclistNew, nvacNew)
     integer, allocatable, dimension(:, :), intent(inout) :: mesh
     integer, allocatable, dimension(:, :), intent(inout) :: vaclist
     integer, intent(in) :: nvac
+    integer, allocatable, dimension(:, :), intent(inout) :: vaclistNew
+    integer, intent(inout) :: nvacNew
 
 
-    integer :: i, j, ii, jj, vidx, swap, k
+    integer :: i, j, ii, jj, vidx, swap 
     double precision :: p
 
     !write(0,*)'nvac = ',nvac
@@ -187,25 +189,32 @@ module mc
       !Get the vacancy coordinate
       i = vaclist(1, vidx)
       j = vaclist(2, vidx)
-      !Calculate the position
+      !Calculate the new position
       ii = i + vaclist(3, vidx)
       jj = j + vaclist(4, vidx)
       !Move the vacancy only if destination is NOT vacancy
-      if ((mesh(ii, jj).ne.type_vac).and.((ii.ge.1).and.(ii.le.nrow)).and.((jj.ge.1).and.(jj.le.ncol))) then
+      if ((mesh(ii, jj).ne.type_vac)) then
         vaclist(1, vidx) = ii
         vaclist(2, vidx) = jj
-
-        !write(0,'(I4,A3,A2 ,I3   ,A2 ,I1        ,A1 ,I3,A2  ,I3,A5     ,I1          ,A1 ,I3,A2  ,I3,A1)')&
-        !          rank,' : ',' [',vidx,'] ',mesh(i, j),'(',i ,', ',j ,') -> ',mesh(ii, jj),'(',ii,', ',jj,')'
-        !swap the elements
+        
 
         swap = mesh(ii, jj)
         mesh(ii, jj) = mesh(i, j)
         mesh(i, j) = swap
-      else
+
+      end if
+      !Update new vacancy list
+      if (((ii.ge.1).and.(ii.le.nrow)).and.((jj.ge.1).and.(jj.le.ncol))) then
+        nvacNew = nvacNew + 1
+        vaclistNew(1, nvacNew) = ii
+        vaclistNew(2, nvacNew) = jj
+        vaclistNew(3, nvacNew) = 0
+        vaclistNew(4, nvacNew) = 0
+      end if
+      !else
         !write(0,'(I4,A3,A2 ,I3   ,A2 ,I1        ,A1 ,I3,A2  ,I3,A5     ,I1          ,A1 ,I3,A2  ,I3,A1)')&
         !          rank,' : ','s[',vidx,'] ',mesh(i, j),'(',i ,', ',j ,') -> ',mesh(ii, jj),'(',ii,', ',jj,')'
-      end if
+      !end if
     end do
 
   end subroutine MC_Step
@@ -283,30 +292,19 @@ module mc
     end do
   end subroutine MC_select_boundary_vac
 
-  subroutine MC_join_vac(vaclist, nvac, vac_sub_list, nvac_subc, direction)
+  subroutine MC_join_vac(vaclist, nvac, vac_sub_list, nvac_subc)
     implicit none
     integer, allocatable, dimension(:,:), intent(inout) :: vaclist
     integer, intent(inout) :: nvac
     integer, allocatable, dimension(:,:), intent(inout) :: vac_sub_list
     integer, intent(in) :: nvac_subc
-    character(len=*), intent(in) :: direction
 
     integer :: i, idx, ii, jj
 
     idx = 1
     do while (idx.le.nvac_subc)
-      ii = vac_sub_list(1, idx)
-      jj = vac_sub_list(2, idx)
-
-      if (trim(direction).eq.'forward') then
-       ii = ii + vac_sub_list(3, idx)
-       jj = jj + vac_sub_list(4, idx)
-     end if
-
-      if (((ii.ge.1).and.(ii.le.nrow)).and.((jj.ge.1).and.(jj.le.ncol))) then
-        nvac = nvac + 1
-        vaclist(:, nvac) = vac_sub_list(:, idx)
-      end if
+      nvac = nvac + 1
+      vaclist(:, nvac) = vac_sub_list(:, idx)
       idx = idx + 1
     end do
 
