@@ -37,6 +37,8 @@ program marble
   write(write_fmt,'(A2,I0,A9)')'(A',len_trim(chkp_filename),',A1,I0.6)'
 
   !Distribute the initial variables
+  call MPI_Bcast(nequib,  1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierror)
+  call MPI_Bcast(neout,  1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierror)
   call MPI_Bcast(nit,     1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierror)
   call MPI_Bcast(nout,    1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierror)
   call MPI_Bcast(nsize,   1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierror)
@@ -133,7 +135,7 @@ program marble
 
   !File writes counter initialization
   cnt = 0
-  do it = 0, nit
+  do it = 0, nequib+nit
     !Generate velocities
     call MC_genvel(mesh, vaclist, nvac, vcl_lft, nvac_lft, vcl_rgt, nvac_rgt,&
      vcl_up, nvac_up, vcl_dwn, nvac_dwn, vcl_still, nvac_still)
@@ -247,16 +249,21 @@ program marble
 
     !call print_vac_list(vaclist, nvac, 'end  ', mesh)
 
-    if (mod(it, nout).eq.0) then
+    if (((mod(it-nequib, nout).eq.0).and.(it.ge.nequib)).or.(((mod(it, neout).eq.0).and.(it.lt.nequib)))) then
       call MPI_Reduce(nvac, totnvac, 1, MPI_INTEGER, MPI_SUM, 0, MPI_COMM_2D, ierror)
       if (rank.eq.0) then
-        write(6,'(A7,I10,A8,I10)')' step = ',it,'nvac = ',totnvac
+        if (it.lt.nequib) then
+          write(6,'(A20,I10,A8,I10)')'equlibration step = ',it,'nvac = ',totnvac
+        else
+          write(6,'(A20,I10,A8,I10)')'production   step = ',it - nequib,'nvac = ',totnvac
+        end if
       end if
-      !wbuf(1:nrow,1:ncol) = abs(mod(crd(1), 2)-mod(crd(2), 2))+1
-      write(filename, write_fmt)chkp_filename,'-',cnt
-      cnt = cnt + 1
-      wbuf(1:nrow,1:ncol) = mesh(1:nrow, 1:ncol)
-      call write_out_mesh(wbuf, filename)
+      if (it.gt.nequib) then
+        write(filename, write_fmt)chkp_filename,'-',cnt
+        cnt = cnt + 1
+        wbuf(1:nrow,1:ncol) = mesh(1:nrow, 1:ncol)
+        call write_out_mesh(wbuf, filename)
+      end if
     end if
   end do
   endTime = MPI_Wtime()

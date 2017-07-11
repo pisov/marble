@@ -6,5 +6,6 @@ slurm*
 *.log
 *.err
 *.out
+frame-*.png
 marble.chkp*
 run/*

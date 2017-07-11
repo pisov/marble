@@ -17,7 +17,7 @@ module globvars
   !nsize - grid size
   !ncol - number of columns of local mesh
   !nrow - number of row of local mesh
-  integer(kind=8) :: nit = 1, it, nout = 1, nequib
+  integer(kind=8) :: nit = 1, it, nout = 1, nequib = 0, neout = 1
   integer :: nsize = 128, ncol, nrow, maxvacnum
   !The Temperature of the sample
   !Total energy of the sample

@@ -1,7 +1,9 @@
-nit =100000000
-nout = 1000000
-Temp =     1.0
-nsize =    512 
-pbvac =   0.05
+nequib =  10000
+neout =    1000
+nit =        10
+nout =        1  
+Temp =      1.0
+nsize =     512 
+pbvac =    0.05
 pbratio =  0.4
-pbfrmv =   0.1
+pbfrmv =    0.5

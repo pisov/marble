@@ -63,6 +63,10 @@ module utils
         buffer = trim(buffer(pos+1:))
 
         select case (trim(label))
+        case ('nequib')
+           read(buffer, *, iostat=ios) nequib
+        case ('neout')
+           read(buffer, *, iostat=ios) neout
         case ('nit')
            read(buffer, *, iostat=ios) nit
         case ('nout')
