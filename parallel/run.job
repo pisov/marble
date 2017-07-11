@@ -2,7 +2,7 @@
 #
 
 #SBATCH -p medium.p               # partition (queue)
-#SBATCH -n 1                     # number of cores
+#SBATCH -n 16                    # number of cores
 #SBATCH -t 0-4:00                 # time (D-HH:MM)
 #SBATCH -o slurm.%N.%j.out        # STDOUT
 #SBATCH -e slurm.%N.%j.err        # STDERR

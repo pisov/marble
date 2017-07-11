@@ -62,7 +62,7 @@ module mc
       call random_number(q)
       if (q.lt.pbfrmv) then
         call random_number(p)
-        if (p.lt.0.25) then
+        if ((p.lt.0.25).and.(mesh(ii,jj-1).ne.type_vac)) then
           vx = 0
           vy =  -1
           nvac_lft = nvac_lft + 1
@@ -70,7 +70,7 @@ module mc
           vcl_lft(2, nvac_lft) = jj
           vcl_lft(3, nvac_lft) = vx
           vcl_lft(4, nvac_lft) = vy
-        else if (p.lt.0.50) then
+        else if ((p.lt.0.50).and.(mesh(ii,jj+1).ne.type_vac)) then
           vx =  0
           vy =  1
           nvac_rgt = nvac_rgt + 1
@@ -78,7 +78,7 @@ module mc
           vcl_rgt(2, nvac_rgt) = jj
           vcl_rgt(3, nvac_rgt) = vx
           vcl_rgt(4, nvac_rgt) = vy
-        else if (p.lt.0.75) then
+        else if ((p.lt.0.75).and.(mesh(ii+1,jj).ne.type_vac)) then
           vx = 1
           vy = 0
           nvac_dwn = nvac_dwn + 1
@@ -86,7 +86,7 @@ module mc
           vcl_dwn(2, nvac_dwn) = jj
           vcl_dwn(3, nvac_dwn) = vx
           vcl_dwn(4, nvac_dwn) = vy
-        else
+        else if (mesh(ii-1,jj).ne.type_vac) then
           vx =  -1
           vy =  0
           nvac_up = nvac_up + 1
@@ -94,6 +94,14 @@ module mc
           vcl_up(2, nvac_up) = jj
           vcl_up(3, nvac_up) = vx
           vcl_up(4, nvac_up) = vy
+        else
+          vx =  0
+          vy =  0
+          nvac_still = nvac_still + 1
+          vcl_still(1, nvac_still) = ii
+          vcl_still(2, nvac_still) = jj
+          vcl_still(3, nvac_still) = vx
+          vcl_still(4, nvac_still) = vy
         end if
       else
         ! Move vacancies toward sametype
@@ -193,7 +201,7 @@ module mc
       ii = i + vaclist(3, vidx)
       jj = j + vaclist(4, vidx)
       !Move the vacancy only if destination is NOT vacancy
-      if ((mesh(ii, jj).ne.type_vac)) then
+      !if ((mesh(ii, jj).ne.type_vac)) then
         vaclist(1, vidx) = ii
         vaclist(2, vidx) = jj
         
@@ -202,7 +210,7 @@ module mc
         mesh(ii, jj) = mesh(i, j)
         mesh(i, j) = swap
 
-      end if
+      !end if
       !Update new vacancy list
       if (((ii.ge.1).and.(ii.le.nrow)).and.((jj.ge.1).and.(jj.le.ncol))) then
         nvacNew = nvacNew + 1
