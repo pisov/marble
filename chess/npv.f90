@@ -77,6 +77,7 @@
         ncount = LS / dims(2)
         m=LS
     
+        do n=1,comm_size
         call MPI_Cart_coords(MPI_COMM_TwoD,n-1,2,crd,ierror)
         i=crd(1)
         j=crd(2)
@@ -150,7 +151,6 @@
         end if
         ca(ls,ls)=0
         ca(1,1)=0
-        call definerule(exru)        ! define the exclusion rule
 
         call  MPI_Scatterv(CA, sendcounts, displs, MPI_BLOCK,&
                 CA, 1, MPI_BLOCK, 0, MPI_COMM_TwoD,ierror)
@@ -453,10 +453,8 @@
         integer LS
         integer CA(LS,LS)
         real cv, cm, acm
-!#include "sprng_f.h"
-!        SPRNG_POINTER stream
         real *8 rn
-        call randomize
+
         acm = cm + cv
         do ii = 1, LS
            do jj = 1, LS
