@@ -365,7 +365,7 @@
 
        !0.857
        call random_number(r)
-       if(r.lt.0.0)then
+       if(r.lt.0.857)then
        do is = 1, LS2
 !c       generate random coordinates of the current site to be checked
        call random_number(r)
