@@ -98,7 +98,7 @@ module utils
     integer :: i
 
     do i = 1, nvac
-        write(0,'(I3,A6,A1,A5,A10,I3,A1,I3,A2,I3,A2,I3,A4,I1, A4,I1,A2,I1,A1)')rank,' : ','[',listname,'] step: ',it,':',i,' (',vaclist(1, i),', ',vaclist(2, i),') : ',mesh(vaclist(1, i), vaclist(2, i)),' v (',vaclist(3,i),', ',vaclist(4,i),')'
+        write(0,'(I3,A6,A1,A5,A10,I15,A1,I3,A2,I3,A2,I3,A4,I1, A4,I2,A2,I2,A2)')rank,' : ','[',listname,'] step: ',it,':',i,' (',vaclist(1, i),', ',vaclist(2, i),') : ',mesh(vaclist(1, i), vaclist(2, i)),' v (',vaclist(3,i),', ',vaclist(4,i),')'
     end do
 
   end subroutine print_vac_list

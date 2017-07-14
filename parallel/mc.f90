@@ -147,7 +147,7 @@ module mc
             vcl_up(3, nvac_up) = vx
             vcl_up(4, nvac_up) = vy    
           end if
-        else if (vx.eq.1) then 
+        else if (vy.eq.1) then 
           call random_number(q)
           if (q.le.0.5) then
             vx =  0
@@ -188,10 +188,9 @@ module mc
     integer, intent(inout) :: nvacNew
 
 
-    integer :: i, j, ii, jj, vidx, swap 
+    integer :: i, j, ii, jj, i0, j0, vidx, swap 
     double precision :: p
 
-    !write(0,*)'nvac = ',nvac
     !Move vacancies
     do vidx = 1, nvac
       !Get the vacancy coordinate
@@ -200,29 +199,31 @@ module mc
       !Calculate the new position
       ii = i + vaclist(3, vidx)
       jj = j + vaclist(4, vidx)
-      !Move the vacancy only if destination is NOT vacancy
-      !if ((mesh(ii, jj).ne.type_vac)) then
-        vaclist(1, vidx) = ii
-        vaclist(2, vidx) = jj
+
         
-
-        swap = mesh(ii, jj)
-        mesh(ii, jj) = mesh(i, j)
-        mesh(i, j) = swap
-
-      !end if
       !Update new vacancy list
       if (((ii.ge.1).and.(ii.le.nrow)).and.((jj.ge.1).and.(jj.le.ncol))) then
+        !Move the vacancy only if destination is NOT vacancy
+        if ((mesh(ii, jj).ne.type_vac)) then
+          vaclist(1, vidx) = ii
+          vaclist(2, vidx) = jj
+
+
+          swap = mesh(ii, jj)
+          mesh(ii, jj) = mesh(i, j)
+          mesh(i, j) = swap
+        else
+          ii = i
+          jj = j
+        end if
+
+
         nvacNew = nvacNew + 1
         vaclistNew(1, nvacNew) = ii
         vaclistNew(2, nvacNew) = jj
         vaclistNew(3, nvacNew) = 0
         vaclistNew(4, nvacNew) = 0
       end if
-      !else
-        !write(0,'(I4,A3,A2 ,I3   ,A2 ,I1        ,A1 ,I3,A2  ,I3,A5     ,I1          ,A1 ,I3,A2  ,I3,A1)')&
-        !          rank,' : ','s[',vidx,'] ',mesh(i, j),'(',i ,', ',j ,') -> ',mesh(ii, jj),'(',ii,', ',jj,')'
-      !end if
     end do
 
   end subroutine MC_Step
