@@ -76,7 +76,7 @@
         mcount = LS / dims(1)
         ncount = LS / dims(2)
         m=LS
-    
+         
         do n=1,comm_size
         call MPI_Cart_coords(MPI_COMM_TwoD,n-1,2,crd,ierror)
         i=crd(1)
@@ -180,7 +180,7 @@
         CA(1:mcount,1:ncount)=sCA(1:mcount,1:ncount)
 
 
-           if (MOD(it,100).eq.0)then
+           if (MOD(it,10000).eq.0)then
 
         call  MPI_Gatherv(CA          , 1, MPI_BLOCK, CA, sendcounts,&
                 displs, MPI_BLOCK, 0, MPI_COMM_TwoD,ierror)
@@ -202,6 +202,7 @@
                           j=j+1
                   else
                           a=a+1
+                          write(*,*)'kor',ii,jj,ca(ii,jj)
                   endif
                   enddo
                   enddo
@@ -228,43 +229,40 @@
        
 
      ! write(filename,'(A4I0.8A4)')'img/step',it,'.ppm'
-     write(filename,'(A4I0.8A4)')'step',it,'.ppm'
+     write(filename,'(A4I0.8A4)')'img/step',it,'.ppm'
      call ppmwrite(filename,buf(:,:),4*LS,4*LS)
 
 
            end if
         end if
 
+
+         if (mod(it,2).eq.0)then 
+
         if(any(black==my_rank))then 
-        
-         call Latex(mcount,ncount,sCA,exru) ! Make one lattice exchange
 
+            call yLatex(mcount,ncount,sCA) ! Make one lattice exchange
 
-       call MPI_send(sCA(0,0),1,MPI_ONE_ROW,up,0,MPI_COMM_TwoD,ierror)
-      call MPI_send(sCA(1,0),1,MPI_ONE_ROW,up,0,MPI_COMM_TwoD,ierror)
-!---
-      call MPI_send(sCA(mcount,0),1,MPI_ONE_ROW,down,0,MPI_COMM_TwoD,ierror)
-      call MPI_send(sCA(mcount+1,0),1,MPI_ONE_ROW,down,0,MPI_COMM_TwoD,ierror)
-!---
       call MPI_send(sCA(0,0),1,MPI_ONE_COL,left,0,MPI_COMM_TwoD,ierror)
       call MPI_send(sCA(0,1),1,MPI_ONE_COL,left,0,MPI_COMM_TwoD,ierror)
 !---
       call MPI_send(sCA(0,ncount),1,MPI_ONE_COL,right,0,MPI_COMM_TwoD,ierror)
       call MPI_send(sCA(0,ncount+1),1,MPI_ONE_COL,right,0,MPI_COMM_TwoD,ierror)
 
-        else
+!------------------
 
+     call MPI_send(sCA(mcount,0),1,MPI_ONE_ROW,down,0,MPI_COMM_TwoD,ierror)
+     call MPI_send(sCA(1,0),1,MPI_ONE_ROW,up,0,MPI_COMM_TwoD,ierror)
 
-       call MPI_recv(sCA(mcount,0),1,MPI_ONE_ROW,down,0,MPI_COMM_TwoD,&
-               MPI_STATUS_IGNORE,ierror)
-      call MPI_recv(sCA(mcount+1,0),1,MPI_ONE_ROW,down,0,MPI_COMM_TwoD,&
-              MPI_STATUS_IGNORE,ierror)
-!---
-      call MPI_recv(sCA(0,0),1,MPI_ONE_ROW,up,0,MPI_COMM_TwoD,&
-              MPI_STATUS_IGNORE,ierror)
-      call MPI_recv(sCA(1,0),1,MPI_ONE_ROW,up,0,MPI_COMM_TwoD,&
-              MPI_STATUS_IGNORE,ierror)
-!---
+!------------------
+
+     call MPI_recv(sCA(mcount+1,0),1,MPI_ONE_ROW,down,0,MPI_COMM_TwoD,&
+             MPI_STATUS_IGNORE,ierror)
+     call MPI_recv(sCA(0,0),1,MPI_ONE_ROW,up,0,MPI_COMM_TwoD,&
+             MPI_STATUS_IGNORE,ierror)
+
+      else
+
       call MPI_recv(sCA(0,ncount),1,MPI_ONE_COL,right,0,MPI_COMM_TwoD,&
               MPI_STATUS_IGNORE,ierror)
       call MPI_recv(sCA(0,ncount+1),1,MPI_ONE_COL,right,0,MPI_COMM_TwoD,&
@@ -275,50 +273,162 @@
       call MPI_recv(sCA(0,1),1,MPI_ONE_COL,left,0,MPI_COMM_TwoD,&
               MPI_STATUS_IGNORE,ierror)
 
-        endif
+!--------------------
+     call MPI_recv(sCA(0,0),1,MPI_ONE_ROW,up,0,MPI_COMM_TwoD,&
+             MPI_STATUS_IGNORE,ierror)
+     call MPI_recv(sCA(mcount+1,0),1,MPI_ONE_ROW,down,0,MPI_COMM_TwoD,&
+             MPI_STATUS_IGNORE,ierror)
 
-      if(any(wite==my_rank))then
+!--------------------
 
-       call Latex(mcount,ncount,sCA,exru) ! Make one lattice exchange
+     call MPI_send(sCA(1,0),1,MPI_ONE_ROW,up,0,MPI_COMM_TwoD,ierror)
+     call MPI_send(sCA(mcount,0),1,MPI_ONE_ROW,down,0,MPI_COMM_TwoD,ierror)
+      endif
 
+         else
 
-       call MPI_send(sCA(0,0),1,MPI_ONE_ROW,up,0,MPI_COMM_TwoD,ierror)
-      call MPI_send(sCA(1,0),1,MPI_ONE_ROW,up,0,MPI_COMM_TwoD,ierror)
+        if(any(black==my_rank))then 
+            call xLatex(mcount,ncount,sCA) ! Make one lattice exchange
+
+     call MPI_send(sCA(0,0),1,MPI_ONE_ROW,up,0,MPI_COMM_TwoD,ierror)
+     call MPI_send(sCA(1,0),1,MPI_ONE_ROW,up,0,MPI_COMM_TwoD,ierror)
 !---
-      call MPI_send(sCA(mcount,0),1,MPI_ONE_ROW,down,0,MPI_COMM_TwoD,ierror)
-      call MPI_send(sCA(mcount+1,0),1,MPI_ONE_ROW,down,0,MPI_COMM_TwoD,ierror)
+     call MPI_send(sCA(mcount,0),1,MPI_ONE_ROW,down,0,MPI_COMM_TwoD,ierror)
+     call MPI_send(sCA(mcount+1,0),1,MPI_ONE_ROW,down,0,MPI_COMM_TwoD,ierror)
+!---------------
+
+
+      call MPI_send(sCA(0,ncount),1,MPI_ONE_COL,right,0,MPI_COMM_TwoD,ierror)
+      call MPI_send(sCA(0,1),1,MPI_ONE_COL,left,0,MPI_COMM_TwoD,ierror)
+!---------------
+
+
+      call MPI_recv(sCA(0,ncount+1),1,MPI_ONE_COL,right,0,MPI_COMM_TwoD,&
+              MPI_STATUS_IGNORE,ierror)
+      call MPI_recv(sCA(0,0),1,MPI_ONE_COL,left,0,MPI_COMM_TwoD,&
+              MPI_STATUS_IGNORE,ierror)
+      else
+
+      call MPI_recv(sCA(mcount,0),1,MPI_ONE_ROW,down,0,MPI_COMM_TwoD,&
+              MPI_STATUS_IGNORE,ierror)
+     call MPI_recv(sCA(mcount+1,0),1,MPI_ONE_ROW,down,0,MPI_COMM_TwoD,&
+             MPI_STATUS_IGNORE,ierror)
 !---
+     call MPI_recv(sCA(0,0),1,MPI_ONE_ROW,up,0,MPI_COMM_TwoD,&
+             MPI_STATUS_IGNORE,ierror)
+     call MPI_recv(sCA(1,0),1,MPI_ONE_ROW,up,0,MPI_COMM_TwoD,&
+             MPI_STATUS_IGNORE,ierror)
+!------------------
+
+
+      call MPI_recv(sCA(0,0),1,MPI_ONE_COL,left,0,MPI_COMM_TwoD,&
+              MPI_STATUS_IGNORE,ierror)
+      call MPI_recv(sCA(0,ncount+1),1,MPI_ONE_COL,right,0,MPI_COMM_TwoD,&
+              MPI_STATUS_IGNORE,ierror)
+
+
+!------------------
+      call MPI_send(sCA(0,1),1,MPI_ONE_COL,left,0,MPI_COMM_TwoD,ierror)
+      call MPI_send(sCA(0,ncount),1,MPI_ONE_COL,right,0,MPI_COMM_TwoD,ierror)
+         endif
+      endif
+
+         if (mod(it,2).eq.0)then 
+
+        if(any(wite==my_rank))then 
+
+            call yLatex(mcount,ncount,sCA) ! Make one lattice exchange
+
       call MPI_send(sCA(0,0),1,MPI_ONE_COL,left,0,MPI_COMM_TwoD,ierror)
       call MPI_send(sCA(0,1),1,MPI_ONE_COL,left,0,MPI_COMM_TwoD,ierror)
 !---
       call MPI_send(sCA(0,ncount),1,MPI_ONE_COL,right,0,MPI_COMM_TwoD,ierror)
       call MPI_send(sCA(0,ncount+1),1,MPI_ONE_COL,right,0,MPI_COMM_TwoD,ierror)
 
-        else
+!------------------
 
-      
-      call  MPI_recv(sCA(mcount,0),1,MPI_ONE_ROW,down,0,MPI_COMM_TwoD,&
+     call MPI_send(sCA(mcount,0),1,MPI_ONE_ROW,down,0,MPI_COMM_TwoD,ierror)
+     call MPI_send(sCA(1,0),1,MPI_ONE_ROW,up,0,MPI_COMM_TwoD,ierror)
+
+!------------------
+
+     call MPI_recv(sCA(mcount+1,0),1,MPI_ONE_ROW,down,0,MPI_COMM_TwoD,&
+             MPI_STATUS_IGNORE,ierror)
+     call MPI_recv(sCA(0,0),1,MPI_ONE_ROW,up,0,MPI_COMM_TwoD,&
+             MPI_STATUS_IGNORE,ierror)
+
+      else
+
+      call MPI_recv(sCA(0,ncount),1,MPI_ONE_COL,right,0,MPI_COMM_TwoD,&
               MPI_STATUS_IGNORE,ierror)
-      call  MPI_recv(sCA(mcount+1,0),1,MPI_ONE_ROW,down,0,MPI_COMM_TwoD,&
+      call MPI_recv(sCA(0,ncount+1),1,MPI_ONE_COL,right,0,MPI_COMM_TwoD,&
               MPI_STATUS_IGNORE,ierror)
-!---
-      call MPI_recv(sCA(0,0),1,MPI_ONE_ROW,up,0,MPI_COMM_TwoD,&
-              MPI_STATUS_IGNORE,ierror)
-      call MPI_recv(sCA(1,0),1,MPI_ONE_ROW,up,0,MPI_COMM_TwoD,&
-              MPI_STATUS_IGNORE,ierror)
-!---
-      call MPI_recv(sCA(0,ncount),1,MPI_ONE_COL,right,0,&
-              MPI_COMM_TwoD,MPI_STATUS_IGNORE,ierror)
-      call MPI_recv(sCA(0,ncount+1),1,MPI_ONE_COL,right,0,&
-              MPI_COMM_TwoD,MPI_STATUS_IGNORE,ierror)
 !---
       call MPI_recv(sCA(0,0),1,MPI_ONE_COL,left,0,MPI_COMM_TwoD,&
               MPI_STATUS_IGNORE,ierror)
       call MPI_recv(sCA(0,1),1,MPI_ONE_COL,left,0,MPI_COMM_TwoD,&
               MPI_STATUS_IGNORE,ierror)
 
-!       
-        endif
+!--------------------
+     call MPI_recv(sCA(0,0),1,MPI_ONE_ROW,up,0,MPI_COMM_TwoD,&
+             MPI_STATUS_IGNORE,ierror)
+     call MPI_recv(sCA(mcount+1,0),1,MPI_ONE_ROW,down,0,MPI_COMM_TwoD,&
+             MPI_STATUS_IGNORE,ierror)
+
+!--------------------
+
+     call MPI_send(sCA(1,0),1,MPI_ONE_ROW,up,0,MPI_COMM_TwoD,ierror)
+     call MPI_send(sCA(mcount,0),1,MPI_ONE_ROW,down,0,MPI_COMM_TwoD,ierror)
+      endif
+
+         else
+
+        if(any(wite==my_rank))then 
+            call xLatex(mcount,ncount,sCA) ! Make one lattice exchange
+
+     call MPI_send(sCA(0,0),1,MPI_ONE_ROW,up,0,MPI_COMM_TwoD,ierror)
+     call MPI_send(sCA(1,0),1,MPI_ONE_ROW,up,0,MPI_COMM_TwoD,ierror)
+!---
+     call MPI_send(sCA(mcount,0),1,MPI_ONE_ROW,down,0,MPI_COMM_TwoD,ierror)
+     call MPI_send(sCA(mcount+1,0),1,MPI_ONE_ROW,down,0,MPI_COMM_TwoD,ierror)
+!---------------
+
+
+      call MPI_send(sCA(0,ncount),1,MPI_ONE_COL,right,0,MPI_COMM_TwoD,ierror)
+      call MPI_send(sCA(0,1),1,MPI_ONE_COL,left,0,MPI_COMM_TwoD,ierror)
+!---------------
+
+
+      call MPI_recv(sCA(0,ncount+1),1,MPI_ONE_COL,right,0,MPI_COMM_TwoD,&
+              MPI_STATUS_IGNORE,ierror)
+      call MPI_recv(sCA(0,0),1,MPI_ONE_COL,left,0,MPI_COMM_TwoD,&
+              MPI_STATUS_IGNORE,ierror)
+      else
+
+      call MPI_recv(sCA(mcount,0),1,MPI_ONE_ROW,down,0,MPI_COMM_TwoD,&
+              MPI_STATUS_IGNORE,ierror)
+     call MPI_recv(sCA(mcount+1,0),1,MPI_ONE_ROW,down,0,MPI_COMM_TwoD,&
+             MPI_STATUS_IGNORE,ierror)
+!---
+     call MPI_recv(sCA(0,0),1,MPI_ONE_ROW,up,0,MPI_COMM_TwoD,&
+             MPI_STATUS_IGNORE,ierror)
+     call MPI_recv(sCA(1,0),1,MPI_ONE_ROW,up,0,MPI_COMM_TwoD,&
+             MPI_STATUS_IGNORE,ierror)
+!------------------
+
+
+      call MPI_recv(sCA(0,0),1,MPI_ONE_COL,left,0,MPI_COMM_TwoD,&
+              MPI_STATUS_IGNORE,ierror)
+      call MPI_recv(sCA(0,ncount+1),1,MPI_ONE_COL,right,0,MPI_COMM_TwoD,&
+              MPI_STATUS_IGNORE,ierror)
+
+
+!------------------
+      call MPI_send(sCA(0,1),1,MPI_ONE_COL,left,0,MPI_COMM_TwoD,ierror)
+      call MPI_send(sCA(0,ncount),1,MPI_ONE_COL,right,0,MPI_COMM_TwoD,ierror)
+         endif
+      endif
+
         enddo
 
         
@@ -347,14 +457,11 @@
 !c end of executions block
         end
 !c-----------------------------------------
-        subroutine Latex(mcount,ncount,sCA,exru) ! Performs the vacancy exchanges
+        subroutine xLatex(mcount,ncount,sCA) ! Performs the vacancy exchanges
        integer mcount,ncount, LS2, is, ix, iy, il, ir
        integer sCA(0:mcount+1,0:ncount+1)
 !       integer ip(LS),im(LS)
       real r 
-       integer exru(2,-1:1,-1:1)
-!#include "sprng_f.h"
-!#define SIMPLE_SPRNG	
         integer seed, len, junk,streamnum, nstreams
         integer gtype,stream
        LS2 = mcount * ncount                 ! Total number of attempts = lattice area
@@ -376,21 +483,21 @@
                    ! then choose the direction of exchange
 
        call random_number(r)
-          if (r.lt.0.25) then ! exclude right
+          if (r.lt.0.50) then ! exclude right
              il = sCA(ix-1,iy)
              ir = sCA(ix+1,iy)
              if(il.eq.ir.and.il.ne.0)then
                 sCA(ix,iy)=il
                 sCA(ix+1,iy)=0
              endif
-          elseif(r.lt.0.5) then ! exclude down
+          elseif(r.lt.0.0) then ! exclude down
              il = sCA(ix,iy-1)
              ir = sCA(ix,iy+1)
              if(il.eq.ir.and.il.ne.0)then
              sCA(ix,iy)=il
              sCA(ix,iy+1)=0
              endif
-          elseif (r.lt.0.75) then !exclude left
+          elseif (r.lt.1.00) then !exclude left
              il = sCA(ix+1,iy)
              ir = sCA(ix-1,iy)
              if(il.eq.ir.and.il.ne.0)then
@@ -421,17 +528,118 @@
 
        call random_number(r)
 
-          if (r.lt.0.25) then ! exclude right
+          if (r.lt.0.5) then ! exclude right
              il = sCA(ix-1,iy)
              ir = sCA(ix+1,iy)
              sCA(ix,iy)=ir
              sCA(ix+1,iy)=0
-          elseif(r.lt.0.5) then ! exclude down
+          elseif(r.lt.0.00) then ! exclude down
              il = sCA(ix,iy-1)
              ir = sCA(ix,iy+1)
              sCA(ix,iy)=ir
              sCA(ix,iy+1)=0
-          elseif (r.lt.75) then !exclude left
+          elseif (r.lt.1.00) then !exclude left
+             il = sCA(ix+1,iy)
+             ir = sCA(ix-1,iy)
+             sCA(ix,iy)=ir
+             sCA(ix-1,iy)=0 
+           elseif(r.lt.0.00) then                    ! exlcude up
+             il = sCA(ix,iy+1)
+             ir = sCA(ix,iy-1)
+             sCA(ix,iy)=ir
+             sCA(ix,iy-1)=0          
+          endif
+       endif
+       enddo
+       endif
+       return
+       end
+!c-----------------------------------------
+        subroutine yLatex(mcount,ncount,sCA) ! Performs the vacancy exchanges
+       integer mcount,ncount, LS2, is, ix, iy, il, ir
+       integer sCA(0:mcount+1,0:ncount+1)
+!       integer ip(LS),im(LS)
+      real r 
+       integer exru(2,-1:1,-1:1)
+!#include "sprng_f.h"
+!#define SIMPLE_SPRNG	
+        integer seed, len, junk,streamnum, nstreams
+        integer gtype,stream
+       LS2 = mcount * ncount                 ! Total number of attempts = lattice area
+
+!        seed = make_sprng_seed()
+!        stream = init_sprng(seed,SPRNG_DEFAULT,1)
+!
+
+       !0.857
+       call random_number(r)
+       if(r.lt.0.857)then
+       do is = 1, LS2
+!c       generate random coordinates of the current site to be checked
+       call random_number(r)
+       ix = int(r*mcount)+1
+       call random_number(r)
+       iy = int(r*ncount)+1
+       if (sCA(ix,iy).eq.0) then    ! .. whether there is a vacancy there
+                   ! then choose the direction of exchange
+
+       call random_number(r)
+          if (r.lt.0.00) then ! exclude right
+             il = sCA(ix-1,iy)
+             ir = sCA(ix+1,iy)
+             if(il.eq.ir.and.il.ne.0)then
+                sCA(ix,iy)=il
+                sCA(ix+1,iy)=0
+             endif
+          elseif(r.lt.0.5) then ! exclude down
+             il = sCA(ix,iy-1)
+             ir = sCA(ix,iy+1)
+             if(il.eq.ir.and.il.ne.0)then
+             sCA(ix,iy)=il
+             sCA(ix,iy+1)=0
+             endif
+          elseif (r.lt.0.00) then !exclude left
+             il = sCA(ix+1,iy)
+             ir = sCA(ix-1,iy)
+             if(il.eq.ir.and.il.ne.0)then
+             sCA(ix,iy)=il
+             sCA(ix-1,iy)=0
+             endif
+          else                     ! exlcude up
+             il = sCA(ix,iy+1)
+             ir = sCA(ix,iy-1)
+             if(il.eq.ir.and.il.ne.0)then
+             sCA(ix,iy)=il
+             sCA(ix,iy-1)=0        
+             endif
+          endif
+       endif
+       enddo
+
+       else
+!diffusion
+       do is = 1, LS2
+!c       generate random coordinates of the current site to be checked
+       call random_number(r)
+       ix = int(r*mcount)+1
+       call random_number(r)
+       iy = int(r*ncount)+1
+       if (sCA(ix,iy).eq.0) then    ! .. whether there is a vacancy there
+                   ! then choose the direction of exchange
+
+       call random_number(r)
+
+          if (r.lt.0.00) then ! exclude right
+             il = sCA(ix-1,iy)
+             ir = sCA(ix+1,iy)
+             sCA(ix,iy)=ir
+             sCA(ix+1,iy)=0
+          elseif(r.lt.0.50) then ! exclude down
+             il = sCA(ix,iy-1)
+             ir = sCA(ix,iy+1)
+             sCA(ix,iy)=ir
+             sCA(ix,iy+1)=0
+          elseif (r.lt.0.00) then !exclude left
              il = sCA(ix+1,iy)
              ir = sCA(ix-1,iy)
              sCA(ix,iy)=ir
@@ -453,8 +661,7 @@
         integer LS
         integer CA(LS,LS)
         real cv, cm, acm
-        real *8 rn
-
+        real *8 r
         acm = cm + cv
         do ii = 1, LS
            do jj = 1, LS
