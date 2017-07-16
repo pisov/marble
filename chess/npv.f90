@@ -38,6 +38,7 @@
        integer, dimension(:,:),allocatable :: CA,sCA
        integer, dimension(:),allocatable :: displs, sendcounts
        integer(kind=mpi_address_kind) :: lb, extent
+!       integer :: lb, extent
        
        character*32 :: filename
        double precision, dimension(:,:), allocatable :: buf
@@ -45,7 +46,9 @@
        integer :: ii,jj, nuvac
        integer,dimension(:),allocatable :: black,wite
 
-       integer MPI_COMM_CART,MPI_COMM_TwoD,MPI_ONE_ROW, MPI_ONE_COL, MPI_BLOCK, MPI_BLOCKA
+       integer MPI_COMM_CART,MPI_COMM_TwoD,MPI_ONE_ROW,&
+               MPI_ONE_COL, MPI_BLOCK, MPI_BLOCKA
+
        integer :: mpi_rowo,mpi_colo,mpi_rowon
         integer,dimension(2) :: crd
         integer, dimension(2) :: dims
