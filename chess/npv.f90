@@ -56,8 +56,7 @@
 
         call MPI_Init(ierror)
         call MPI_Comm_size(MPI_COMM_WORLD,comm_size,ierror)
-
-
+    
         allocate(displs(comm_size))
         allocate(sendcounts(comm_size))
 
@@ -77,6 +76,7 @@
         ncount = LS / dims(2)
         m=LS
          
+
         do n=1,comm_size
         call MPI_Cart_coords(MPI_COMM_TwoD,n-1,2,crd,ierror)
         i=crd(1)
@@ -110,33 +110,16 @@
         call  MPI_Type_create_resized(MPI_BLOCKA,lb,extent,MPI_BLOCK,ierror )
         call  MPI_Type_commit(MPI_BLOCK,ierror)
 !define the sending blocks
-        call mpi_type_contiguous(2*(mcount+2),mpi_integer,mpi_colo,ierror)
-        call mpi_type_commit(mpi_colo,ierror)
+!       call mpi_type_contiguous(2*(mcount+2),mpi_integer,mpi_colo,ierror)
+!        call mpi_type_commit(mpi_colo,ierror)
 
-        call mpi_type_vector(2*(ncount+2),2,mcount+2,mpi_integer,mpi_rowo,ierror)
+!        call mpi_type_vector(2*(ncount+2),2,mcount+2,mpi_integer,mpi_rowo,ierror)
 !        call mpi_type_create_resized(mpi_rowon,lb,extent,mpi_rowo,ierror)
-        call mpi_type_commit(mpi_rowo,ierror)
+!        call mpi_type_commit(mpi_rowo,ierror)
 
-        write(*,*)'comm_size', comm_size
 
         allocate(black(comm_size/2))
         allocate(wite(comm_size/2))
-!define the chess board        
-        i=1
-        do,j=0,comm_size-1,2
-           if(mod(j/(nint(sqrt(real(comm_size)))),2).eq.0)then
-              black(i)=j
-              wite(i)=j+1
-              i=i+1
-           else
-              black(i)=j+1
-              wite(i)=j
-              i=i+1
-           endif
-        enddo
-    
-        write(*,*)'black',black
-        write(*,*)'wite',wite
 
         allocate(CA(LS,LS))
         allocate(sCA(0:mcount+1,0:ncount+1))
@@ -145,12 +128,43 @@
 
         time = MPI_Wtime()
 
+!define the chess board        
+       jj=1 
+       do i=0, dims(1)-1
+          do j=0, dims(2)-1,2
+           
+           if(mod(i,2).eq.0)then
+                   black(jj)=j+dims(2)*i
+                   wite(jj)=j+dims(2)*i+1
+                   jj=jj+1
+           else
+                   black(jj)=j+dims(2)*i+1
+                   wite(jj)=j+dims(2)*i
+                   jj=jj+1
+           endif
+
+          enddo
+       enddo
+
+!       write(*,*)'black',black
+!       write(*,*)'wite',wite
+        
+        if(mod(dims(1),2)+mod(dims(2),2).ne.0.or.dims(1)*dims(2).ne.comm_size)then
+
+                if(my_rank.eq.0)then
+                   write(*,*)"please choose another number of processes"
+                endif
+
+                call mpi_finalize(ierror)
+               call exit
+        endif
 
         if(my_rank.eq.0)then
         call initCA1(LS, CA, cv, cm) ! this is initialization
         end if
-        ca(ls,ls)=0
-        ca(1,1)=0
+
+!        ca(ls,ls)=0
+!        ca(1,1)=0
 
         call  MPI_Scatterv(CA, sendcounts, displs, MPI_BLOCK,&
                 CA, 1, MPI_BLOCK, 0, MPI_COMM_TwoD,ierror)
@@ -176,11 +190,13 @@
 
 !c    Time loop
         do it = 0, nt
+        
+!        write(*,*)my_rank,'tuk'
+
+
+           if (MOD(it,1000).eq.0)then
 
         CA(1:mcount,1:ncount)=sCA(1:mcount,1:ncount)
-
-
-           if (MOD(it,10000).eq.0)then
 
         call  MPI_Gatherv(CA          , 1, MPI_BLOCK, CA, sendcounts,&
                 displs, MPI_BLOCK, 0, MPI_COMM_TwoD,ierror)
@@ -490,26 +506,12 @@
                 sCA(ix,iy)=il
                 sCA(ix+1,iy)=0
              endif
-          elseif(r.lt.0.0) then ! exclude down
-             il = sCA(ix,iy-1)
-             ir = sCA(ix,iy+1)
-             if(il.eq.ir.and.il.ne.0)then
-             sCA(ix,iy)=il
-             sCA(ix,iy+1)=0
-             endif
           elseif (r.lt.1.00) then !exclude left
              il = sCA(ix+1,iy)
              ir = sCA(ix-1,iy)
              if(il.eq.ir.and.il.ne.0)then
-             sCA(ix,iy)=il
-             sCA(ix-1,iy)=0
-             endif
-          else                     ! exlcude up
-             il = sCA(ix,iy+1)
-             ir = sCA(ix,iy-1)
-             if(il.eq.ir.and.il.ne.0)then
-             sCA(ix,iy)=il
-             sCA(ix,iy-1)=0        
+                sCA(ix,iy)=il
+                sCA(ix-1,iy)=0
              endif
           endif
        endif
@@ -533,21 +535,11 @@
              ir = sCA(ix+1,iy)
              sCA(ix,iy)=ir
              sCA(ix+1,iy)=0
-          elseif(r.lt.0.00) then ! exclude down
-             il = sCA(ix,iy-1)
-             ir = sCA(ix,iy+1)
-             sCA(ix,iy)=ir
-             sCA(ix,iy+1)=0
           elseif (r.lt.1.00) then !exclude left
              il = sCA(ix+1,iy)
              ir = sCA(ix-1,iy)
              sCA(ix,iy)=ir
              sCA(ix-1,iy)=0 
-           elseif(r.lt.0.00) then                    ! exlcude up
-             il = sCA(ix,iy+1)
-             ir = sCA(ix,iy-1)
-             sCA(ix,iy)=ir
-             sCA(ix,iy-1)=0          
           endif
        endif
        enddo
@@ -584,33 +576,19 @@
                    ! then choose the direction of exchange
 
        call random_number(r)
-          if (r.lt.0.00) then ! exclude right
-             il = sCA(ix-1,iy)
-             ir = sCA(ix+1,iy)
-             if(il.eq.ir.and.il.ne.0)then
-                sCA(ix,iy)=il
-                sCA(ix+1,iy)=0
-             endif
-          elseif(r.lt.0.5) then ! exclude down
+          if(r.lt.0.5) then ! exclude down
              il = sCA(ix,iy-1)
              ir = sCA(ix,iy+1)
              if(il.eq.ir.and.il.ne.0)then
-             sCA(ix,iy)=il
-             sCA(ix,iy+1)=0
-             endif
-          elseif (r.lt.0.00) then !exclude left
-             il = sCA(ix+1,iy)
-             ir = sCA(ix-1,iy)
-             if(il.eq.ir.and.il.ne.0)then
-             sCA(ix,iy)=il
-             sCA(ix-1,iy)=0
+                sCA(ix,iy)=il
+                sCA(ix,iy+1)=0
              endif
           else                     ! exlcude up
              il = sCA(ix,iy+1)
              ir = sCA(ix,iy-1)
              if(il.eq.ir.and.il.ne.0)then
-             sCA(ix,iy)=il
-             sCA(ix,iy-1)=0        
+                sCA(ix,iy)=il
+                sCA(ix,iy-1)=0        
              endif
           endif
        endif
@@ -629,21 +607,11 @@
 
        call random_number(r)
 
-          if (r.lt.0.00) then ! exclude right
-             il = sCA(ix-1,iy)
-             ir = sCA(ix+1,iy)
-             sCA(ix,iy)=ir
-             sCA(ix+1,iy)=0
-          elseif(r.lt.0.50) then ! exclude down
+          if(r.lt.0.50) then ! exclude down
              il = sCA(ix,iy-1)
              ir = sCA(ix,iy+1)
              sCA(ix,iy)=ir
              sCA(ix,iy+1)=0
-          elseif (r.lt.0.00) then !exclude left
-             il = sCA(ix+1,iy)
-             ir = sCA(ix-1,iy)
-             sCA(ix,iy)=ir
-             sCA(ix-1,iy)=0 
            elseif(r.lt.1.0) then                    ! exlcude up
              il = sCA(ix,iy+1)
              ir = sCA(ix,iy-1)
