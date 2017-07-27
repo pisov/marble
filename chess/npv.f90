@@ -30,8 +30,6 @@
 !c end of the declarations block  
 !c    Initialize the lattice AND the random number generator
 
-        integer seed, len, junk,streamnum, nstreams
-        integer gtype,stream
 !mpi
 
         integer :: i, j, n,  ncount , mcount ,m , sendcnts , int_size,a
@@ -55,6 +53,8 @@
         logical, dimension(2) :: periods
         integer :: ierror, my_rank, comm_size, up, down, left, right
         double precision :: time
+        integer :: nuvac 
+        integer, dimension(:,:), allocatable :: vaclist 
  
 
         call MPI_Init(ierror)
@@ -163,8 +163,20 @@
         endif
 
         if(my_rank.eq.0)then
-        call initCA1(LS, CA, cv, cm) ! this is initialization
+        call initCA1(LS, CA, cv, cm,nuvac) ! this is initialization
         end if
+
+        call MPI_Bcast(nuvac, 1 , mpi_integer, 0, mpi_comm_twod,ierror)
+
+        write(*,*) nuvac
+
+        allocate(vaclist(nuvac, 2))
+
+        call updatevaclist (mcount,ncount, sCA,nuvac, vaclist )
+        
+
+
+
 
 !        ca(ls,ls)=0
 !        ca(1,1)=0
@@ -627,13 +639,15 @@
        return
        end
 !c-----------------------------------------
-        subroutine initCA1(LS, CA, cv, cm)
+        subroutine initCA1(LS, CA, cv, cm, nuvac)
 !c      Totally random spread of the three components -1, 0 (vacancy), +1
         integer LS
         integer CA(LS,LS)
         real cv, cm, acm
         real *8 r
+
         acm = cm + cv
+        nuvac = 0
         do ii = 1, LS
            do jj = 1, LS
            call random_number(r)
@@ -643,8 +657,47 @@
               CA(ii,jj) =  0
            else
               CA(ii,jj) = 1
+              nuvac = nuvac+1
            endif
            enddo
         enddo
+
         return
         end
+!c-----------------------------------------
+        subroutine updatevaclist (mcount,ncount, sCA,nuvac, vaclist )
+
+                integer :: mcount, ncount 
+                integer :: nuvac
+                integer :: sCA(0:ncount+1,0:mcount+1), vaclist(nuvac,2)
+
+                integer :: i, j, counter 
+
+                counter = 1 
+                vaclist = -1
+
+                do i=1, mcount
+                   do j=1, ncount
+                   
+                   if(sCA(j,i).eq.0)then
+                           vaclist(counter,1)=j
+                           vaclist(counter,2)=i
+                           counter=counter+1
+                   endif
+
+                   enddo
+                enddo
+
+        return
+        end
+
+
+
+
+
+
+
+
+
+
+
