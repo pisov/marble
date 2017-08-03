@@ -199,8 +199,8 @@ module mc
                 counter = 1 
                 vac(:,:) = -1
 
-                do i=1, nrow
-                   do j=1, ncol
+                do i=1, ncol
+                   do j=1, nrow
                    
                    if(mesh(j,i).eq.0)then
                            vac(counter,1)=j

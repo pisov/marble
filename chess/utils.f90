@@ -78,13 +78,13 @@ module utils
         case ('nsize')
             read(buffer, *, iostat=ios) nsize
         case default
-          write(0,*)'nit',nit
-          write(0,*)'nout',nout
-          write(0,*)'temp',temp
-          write(0,*)'pbvac',pbvac
-          write(0,*)'pbratio',pbratio
-          write(0,*)'pbfrmv',pbfrmv
-          write(0,*)'nsize',nsize
+!         write(0,*)'nit',nit
+!         write(0,*)'nout',nout
+!         write(0,*)'temp',temp
+!         write(0,*)'pbvac',pbvac
+!         write(0,*)'pbratio',pbratio
+!         write(0,*)'pbfrmv',pbfrmv
+!         write(0,*)'nsize',nsize
         end select
      end if
   end do

@@ -58,22 +58,22 @@ program marble
   call MPI_Cart_shift(MPI_COMM_2D, 0, 1, up, down, ierror)
   !Get directions in left/right
   call MPI_Cart_shift(MPI_COMM_2D, 1, 1,left,right, ierror)
-
+  ! write(*,*)rank,'ud',up,down,'l/r',left,right
   !Check grid decomposition
-  if ((mod(nsize,dims(1))+mod(nsize,dims(2))) > 0) then
-    if (rank.eq.0) then
-      write(0,*)'Grid decomposition is not possible with grid size: ',nsize,' and decomposition: ',nrow,'x',ncol
-      write(0,*)'Please try to run your code with different number ot processes'
-    end if
-    call MPI_Finalize(ierror)
-    call exit
-  end if
+!  if ((mod(nsize,dims(1))+mod(nsize,dims(2))) > 0) then
+!    if (rank.eq.0) then
+!      write(0,*)'Grid decomposition is not possible with grid size: ',nsize,' and decomposition: ',nrow,'x',ncol
+!      write(0,*)'Please try to run your code with different number ot processes'
+!    end if
+!    call MPI_Finalize(ierror)
+!    call exit
+!  end if
   !Calculate the local mesh size
   nrow = nsize / dims(1)
   ncol = nsize / dims(2)
 
   if (rank.eq.0) then
-    write(0,*)'Decomposition: ',nrow,'x',ncol,'[',dims(1),',',dims(2),']'
+!    write(0,*)'Decomposition: ',nrow,'x',ncol,'[',dims(1),',',dims(2),']'
   end if
 
   !Create MPI types
@@ -126,8 +126,8 @@ program marble
           enddo
        enddo
 
-       write(*,*)'black',black
-       write(*,*)'wite',wite
+!       write(*,*)'black',black
+!       write(*,*)'wite',wite
         
         if(mod(dims(1),2)+mod(dims(2),2).ne.0.or.dims(1)*dims(2).ne.commsize)then
 
@@ -379,7 +379,7 @@ program marble
     if (mod(it, nout).eq.0) then
       call MPI_Reduce(nvac, totnvac, 1, MPI_INTEGER, MPI_SUM, 0, MPI_COMM_2D, ierror)
       if (rank.eq.0) then
-        write(6,'(A7,I10,A8,I10)')' step = ',it,'nvac = ',totnvac
+!       write(6,'(A7,I10,A8,I10)')' step = ',it,'nvac = ',totnvac
       end if
       !wbuf(1:nrow,1:ncol) = abs(mod(crd(1), 2)-mod(crd(2), 2))+1
       write(filename, write_fmt)chkp_filename,'-',cnt
@@ -390,7 +390,8 @@ program marble
   end do
   endTime = MPI_Wtime()
   if (rank.eq.0) then
-    write(0,'(A16,F10.2)'),'Execution time: ',endTime-startTime
+    !write(0,'(A16,F10.2)'),'Execution time: ',endTime-startTime
+    write(*,*)commsize,endTime-startTime
   end if
   !Deallocate the memory
   deallocate(mesh)
