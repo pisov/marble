@@ -1,0 +1,8 @@
+nit =  100000
+nout = 100000
+Temp =    1.0
+nsize =   20000 
+pbvac =  0.01
+pbratio = 0.5
+pbfrmv =  0.1
+

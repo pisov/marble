@@ -1,125 +1,108 @@
 module utils
-implicit none
-contains
-subroutine pgmwrite(filename, x, nx, ny)
-
+  use globvars
   implicit none
 
-  character*(*) :: filename
-  integer :: nx, ny
 
-  real,    dimension(nx, ny) :: x
+  contains
+  subroutine write_out_mesh(mesh, filename)
+    integer, dimension(:,:), intent(inout) :: mesh
+    character(len=*), intent(in) :: filename
 
-  real,    dimension(nx, ny) :: tmp
-  integer, dimension(nx, ny) :: grey
+    integer :: ierror
+    integer :: file_ptr
+    integer :: bufsize
 
-  real :: tmin, tmax
-  real, parameter :: thresh = 255.0
 
-  integer, parameter :: iounit = 10
+    !write(0,*)'--->',mesh(5, 11)
+    bufsize = ncol * nrow
 
-  integer :: i, j
+    call MPI_File_open(MPI_COMM_2D, trim(filename), &
+                        MPI_MODE_WRONLY + MPI_MODE_CREATE, &
+                        MPI_INFO_NULL, file_ptr, ierror)
 
-  tmp(:,:) = x(:,:)
+    call MPI_File_set_view(file_ptr, displs(rank+1), MPI_INTEGER, &
+                           MPI_BLOCK2, 'native', &
+                           MPI_INFO_NULL, ierror)
+    call MPI_File_write(file_ptr, mesh, bufsize, MPI_INTEGER, &
+                        MPI_STATUS_IGNORE, ierror)
+    call MPI_File_close(file_ptr, ierror)
 
-!  Find the max and min absolute values of the array
+  end subroutine write_out_mesh
 
-  tmin = minval(abs(tmp(:,:)))
-  tmax = maxval(abs(tmp(:,:)))
+  subroutine check_out_file()
+    implicit none
+    logical :: res
 
-!  Scale the values appropriately so the lies between 0 and thresh
+    inquire( file=trim(chkp_filename), exist=res )
 
-  if (tmin .lt. 0 .or. tmax .gt. thresh) then
+    if (res.eq..true.) then
+      !
+    end if
 
-    tmp(:,:) = int((thresh*((abs(tmp(:,:)-tmin))/(tmax-tmin))) + 0.5)
+  end subroutine check_out_file
 
-  else
+  subroutine read_input_file(filename)
+    character(len=64), intent(in) :: filename
 
-    tmp(:,:) = int(abs(tmp(:,:)) + 0.5)
+    !Control file read variables
+    character(len=128) :: buffer, label
+    integer :: pos
+    integer, parameter :: fh = 15
+    integer :: ios = 0
+    integer :: line = 0
 
-  end if
+    open(fh, file=filename)
+    do while (ios == 0)
+     read(fh, '(A)', iostat=ios) buffer
+     if (ios == 0) then
+        line = line + 1
 
-!  Increase the contrast by boosting the lower values
+        ! Find the first instance of whitespace.  Split label and data.
+        pos = scan(buffer, '=')
+        label = trim(buffer(1:pos-1))
+        buffer = trim(buffer(pos+1:))
 
-  grey(:,:) = thresh * sqrt(tmp(:,:)/thresh)
-
-  open(unit=iounit, file=filename)
-
-  write(iounit,fmt='(''P2''/''# Written by pgmwrite'')')
-  write(iounit,*) nx, ny
-  write(iounit,*) int(thresh)
-  write(iounit,fmt='(16(i3,'' ''))') ((grey(i,j), i=1,nx), j=1,ny)
-
-  close(unit=iounit)
-
-end subroutine pgmwrite
-
-subroutine ppmwrite(filename, buf, nx, ny)
-  implicit none
-  integer, intent(in) :: nx, ny
-  double precision, dimension(nx, ny), intent(in) :: buf
-!  character, dimension(:) :: filename
-  character (len=32) :: filename
-
-  integer, dimension(nx, ny) :: red, blue, green
-  double precision :: vmax, vmin, deltaV
-  double precision :: thresh
-  integer :: i, j, cr, cb, cg
-  integer, parameter :: iounit = 10
-
-  vmax = maxval(buf)
-  vmin = minval(buf)
-  thresh = 255.d0
-  deltaV = vmax - vmin
-
-  !open file for writing
-  open(unit=iounit, file=filename)
-  !write header info
-  write(iounit,fmt='(''P3''/''# Written by ppmwrite'')')
-  write(iounit,*) nx, ny
-  write(iounit,*) int(thresh)
-
-  red(:,:) = int((buf(:,:) - vmin) * thresh / (vmax - vmin))
-  blue(:,:) = red(:,:)
-  green(:,:) = red(:,:)
-
-  do j = 1, ny
-    do i = 1, nx
-      cr = 255
-      cg = 255
-      cb = 255
-      
-      if (buf(i,j) .lt. (vmin + 0.25d0 * deltaV)) then
-        cr = 0
-        cg = 0
-!        cb = 0
-!        cg = int(thresh*(4 * (buf(i,j) - vmin) / deltaV))
-      else if (buf(i,j) .lt. (vmin + 0.5d0 * deltaV)) then
-!         cr = 0
-!        cb=0
-!        cg=0
-!         cb = int(thresh*(1 + 4 * (vmin + 0.25d0*deltaV - buf(i,j)) / deltaV))
-      else if (buf(i,j) .lt. (vmin + 0.75d0 * deltaV)) then
-!        cr = int(thresh*(4 * (buf(i,j) - vmin - 0.5d0*deltaV) / deltaV))
-!          cb = 0
-!        cr=0
-!        cg=0
-      else
-!        cg = int(thresh*(1+4*(vmin  + 0.75d0*deltaV-buf(i,j)) / deltaV))
-!        cr = 0
-        cb=0
-        cg=0
-      end if
-      red(i,j)   = cr
-      green(i,j) = cg
-      blue(i,j)  = cb
-    end do
+        select case (trim(label))
+        case ('nit')
+           read(buffer, *, iostat=ios) nit
+        case ('nout')
+           read(buffer, *, iostat=ios) nout
+        case ('Temp')
+            read(buffer, *, iostat=ios) Temp
+        case ('pbvac')
+            read(buffer, *, iostat=ios) pbvac
+        case ('pbratio')
+            read(buffer, *, iostat=ios) pbratio
+        case ('pbfrmv')
+            read(buffer, *, iostat=ios) pbfrmv
+        case ('nsize')
+            read(buffer, *, iostat=ios) nsize
+        case default
+!         write(0,*)'nit',nit
+!         write(0,*)'nout',nout
+!         write(0,*)'temp',temp
+!         write(0,*)'pbvac',pbvac
+!         write(0,*)'pbratio',pbratio
+!         write(0,*)'pbfrmv',pbfrmv
+!         write(0,*)'nsize',nsize
+        end select
+     end if
   end do
+  end subroutine read_input_file
 
-  write(iounit,fmt='(5(3I4,'' ''))') ((red(i,j),green(i,j),blue(i,j), i=1,nx), j=1,ny)
+  subroutine print_vac_list(vaclist, nvac, listname, mesh)
+    implicit none
+    integer, dimension(4,maxvacnum), intent(in) :: vaclist
+    integer, intent(in) :: nvac
+    character(len=*) :: listname
+    integer, dimension(0:nrow+1, 0:ncol+1) :: mesh
 
-  !close file
-  close(unit=iounit)
-end subroutine ppmwrite
+    integer :: i
+
+    do i = 1, nvac
+        write(0,'(I3,A6,A1,A5,A10,I3,A1,I3,A2,I3,A2,I3,A4,I1, A4,I1,A2,I1,A1)')rank,' : ','[',listname,'] step: ',it,':',i,' (',vaclist(1, i),', ',vaclist(2, i),') : ',mesh(vaclist(1, i), vaclist(2, i)),' v (',vaclist(3,i),', ',vaclist(4,i),')'
+    end do
+
+  end subroutine print_vac_list
 
 end module utils
