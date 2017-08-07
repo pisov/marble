@@ -39,21 +39,13 @@ module mc
     nvac = vidx - 1
   end subroutine MC_init_mesh
 
-  subroutine MC_genvel(mesh, vaclist, nvac,vcl_lft, nvac_lft, vcl_rgt, nvac_rgt,&
-      vcl_up, nvac_up, vcl_dwn, nvac_dwn, vcl_still, nvac_still)
+  subroutine MC_genvel(mesh, vaclist, nvac)
     integer, allocatable, dimension(:, :), intent(in) :: mesh
-    integer, allocatable, dimension(:, :), intent(inout) ::  vaclist, vcl_lft, vcl_rgt, vcl_up, vcl_dwn, vcl_still
-    integer, intent(out) :: nvac_lft, nvac_rgt, nvac_up, nvac_dwn, nvac_still
+    integer, allocatable, dimension(:, :), intent(inout) ::  vaclist
     integer, intent(in) :: nvac
 
     integer :: vidx, vx, vy, ii, jj
     double precision :: p, q
-
-    nvac_lft = 0
-    nvac_rgt = 0
-    nvac_up  = 0
-    nvac_dwn = 0
-    nvac_still = 0
 
     do vidx = 1, nvac
       ii = vaclist(1, vidx)
@@ -65,44 +57,21 @@ module mc
         if ((p.lt.0.25).and.(mesh(ii,jj-1).ne.type_vac)) then
           vx = 0
           vy =  -1
-          nvac_lft = nvac_lft + 1
-          vcl_lft(1, nvac_lft) = ii
-          vcl_lft(2, nvac_lft) = jj
-          vcl_lft(3, nvac_lft) = vx
-          vcl_lft(4, nvac_lft) = vy
         else if ((p.lt.0.50).and.(mesh(ii,jj+1).ne.type_vac)) then
           vx =  0
           vy =  1
-          nvac_rgt = nvac_rgt + 1
-          vcl_rgt(1, nvac_rgt) = ii
-          vcl_rgt(2, nvac_rgt) = jj
-          vcl_rgt(3, nvac_rgt) = vx
-          vcl_rgt(4, nvac_rgt) = vy
         else if ((p.lt.0.75).and.(mesh(ii+1,jj).ne.type_vac)) then
           vx = 1
           vy = 0
-          nvac_dwn = nvac_dwn + 1
-          vcl_dwn(1, nvac_dwn) = ii
-          vcl_dwn(2, nvac_dwn) = jj
-          vcl_dwn(3, nvac_dwn) = vx
-          vcl_dwn(4, nvac_dwn) = vy
         else if (mesh(ii-1,jj).ne.type_vac) then
           vx =  -1
           vy =  0
-          nvac_up = nvac_up + 1
-          vcl_up(1, nvac_up) = ii
-          vcl_up(2, nvac_up) = jj
-          vcl_up(3, nvac_up) = vx
-          vcl_up(4, nvac_up) = vy
         else
           vx =  0
           vy =  0
-          nvac_still = nvac_still + 1
-          vcl_still(1, nvac_still) = ii
-          vcl_still(2, nvac_still) = jj
-          vcl_still(3, nvac_still) = vx
-          vcl_still(4, nvac_still) = vy
         end if
+        vaclist(3, vidx) = vx
+        vaclist(4, vidx) = vy
       else
         ! Move vacancies toward sametype
         vx = 0
@@ -133,81 +102,68 @@ module mc
           if (q.le.0.5) then
             vx = 1
             vy = 0
-            nvac_dwn = nvac_dwn + 1
-            vcl_dwn(1, nvac_dwn) = ii
-            vcl_dwn(2, nvac_dwn) = jj
-            vcl_dwn(3, nvac_dwn) = vx
-            vcl_dwn(4, nvac_dwn) = vy
           else
             vx = -1
             vy = 0
-            nvac_up = nvac_up + 1
-            vcl_up(1, nvac_up) = ii
-            vcl_up(2, nvac_up) = jj
-            vcl_up(3, nvac_up) = vx
-            vcl_up(4, nvac_up) = vy    
           end if
         else if (vy.eq.1) then 
           call random_number(q)
           if (q.le.0.5) then
             vx =  0
             vy =  1
-            nvac_rgt = nvac_rgt + 1
-            vcl_rgt(1, nvac_rgt) = ii
-            vcl_rgt(2, nvac_rgt) = jj
-            vcl_rgt(3, nvac_rgt) = vx
-            vcl_rgt(4, nvac_rgt) = vy  
           else
             vx = 0
             vy =  -1
-            nvac_lft = nvac_lft + 1
-            vcl_lft(1, nvac_lft) = ii
-            vcl_lft(2, nvac_lft) = jj
-            vcl_lft(3, nvac_lft) = vx
-            vcl_lft(4, nvac_lft) = vy
           end if
         else
           vx =  0
           vy =  0
-          nvac_still = nvac_still + 1
-          vcl_still(1, nvac_still) = ii
-          vcl_still(2, nvac_still) = jj
-          vcl_still(3, nvac_still) = vx
-          vcl_still(4, nvac_still) = vy
         end if
+        vaclist(3, vidx) = vx
+        vaclist(4, vidx) = vy
       end if
     end do
 
   end subroutine MC_genvel
 
-  subroutine MC_Step(mesh, vaclist, nvac, vaclistNew, nvacNew)
+  subroutine MC_Step(mesh, vaclist, nvac, side)
     integer, allocatable, dimension(:, :), intent(inout) :: mesh
     integer, allocatable, dimension(:, :), intent(inout) :: vaclist
     integer, intent(in) :: nvac
-    integer, allocatable, dimension(:, :), intent(inout) :: vaclistNew
-    integer, intent(inout) :: nvacNew
+    character(len=*), intent(in) :: side 
 
-
-    integer :: i, j, ii, jj, i0, j0, vidx, swap 
-    double precision :: p
+    integer :: i, j, ii, jj, vidx, swap 
+    logical :: move
 
     !Move vacancies
     do vidx = 1, nvac
       !Get the vacancy coordinate
       i = vaclist(1, vidx)
       j = vaclist(2, vidx)
-      !Calculate the new position
-      ii = i + vaclist(3, vidx)
-      jj = j + vaclist(4, vidx)
+      !Decide to move based on side
+      if (trim(side).eq.'down' ) then
+        if (i.gt.j) then
+          move = .true.
+        else
+          move = .false.
+        end if 
+      else
+        if (i.le.j) then
+          move = .true.
+        else
+          move = .false.
+        end if  
+      endif
+      if (move) then
+        !Calculate the new position
+        ii = i + vaclist(3, vidx)
+        jj = j + vaclist(4, vidx)
 
-        
-      !Update new vacancy list
-      if (((ii.ge.1).and.(ii.le.nrow)).and.((jj.ge.1).and.(jj.le.ncol))) then
+        !Update new vacancy list
         !Move the vacancy only if destination is NOT vacancy
         if ((mesh(ii, jj).ne.type_vac)) then
           vaclist(1, vidx) = ii
           vaclist(2, vidx) = jj
-
 
           swap = mesh(ii, jj)
           mesh(ii, jj) = mesh(i, j)
@@ -217,12 +173,8 @@ module mc
           jj = j
         end if
 
-
-        nvacNew = nvacNew + 1
-        vaclistNew(1, nvacNew) = ii
-        vaclistNew(2, nvacNew) = jj
-        vaclistNew(3, nvacNew) = 0
-        vaclistNew(4, nvacNew) = 0
+        vaclist(3, vidx) = 0
+        vaclist(4, vidx) = 0
       end if
     end do
 

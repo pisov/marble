@@ -7,5 +7,5 @@ slurm*
 *.err
 *.out
 frame-*.png
-marble.chkp*
+*.chkp*
 run/*

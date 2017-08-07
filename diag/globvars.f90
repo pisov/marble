@@ -6,8 +6,8 @@ module globvars
   integer, parameter :: type_red = 1
   integer, parameter :: type_blue = 2
 
-  character(len=64) :: chkp_filename = 'marble.chkp'
-  character(len=64) :: inpt_filename = 'marble.in'
+  character(len=64) :: chkp_filename = 'diag.chkp'
+  character(len=64) :: inpt_filename = 'diag.in'
 
   !MC variables
   !nit - number of productive iteration steps

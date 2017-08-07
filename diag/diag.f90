@@ -1,4 +1,4 @@
-program marble
+program diag
   use globvars
   use mc
   use utils
@@ -154,7 +154,34 @@ program marble
   !File writes counter initialization
   cnt = 0
   do it = 0, nequib+nit
+    ! Generate velocity for each vacancy
+    call MC_genvel(mesh, vaclist, nvac)
 
+    !Move vacancies down diagonal
+    call MC_Step(mesh, vaclist, nvac, 'down')
+
+    !Exchange boundaries
+    call MPI_Sendrecv(mesh(0, 0), 2, MPI_TYPE_COL, left , 0,&
+      mesh(0, ncol), 2, MPI_TYPE_COL, right, 0, MPI_COMM_2D,&
+      MPI_STATUS_IGNORE, ierror)
+
+    call MPI_Sendrecv(mesh(0, 0), 2, MPI_TYPE_ROW, up, 0,&
+      mesh(nrow,0),2,MPI_TYPE_ROW,down,0,MPI_COMM_2D,&
+      MPI_STATUS_IGNORE, ierror)
+ 
+    !Update vacancy list
+    !Move vacancies up diagonal
+    call MC_Step(mesh, vaclist, nvac, 'up')
+    !Exchange boundaries
+!    call MPI_Sendrecv(mesh(0, ncol), 2, MPI_TYPE_COL, right, 0,&
+!      mesh(0, 0), 2, MPI_TYPE_COL, left , 0, MPI_COMM_2D,&
+!      MPI_STATUS_IGNORE, ierror)
+    
+!    call MPI_Sendrecv(mesh(nrow, 0), 2, MPI_TYPE_ROW, down, 0,&
+!      mesh(0, 0), 2, MPI_TYPE_ROW, up, 0, MPI_COMM_2D,&
+!      MPI_STATUS_IGNORE, ierror)
+
+    !Update vacancy list
     if (((mod(it-nequib, nout).eq.0).and.(it.ge.nequib)).or.(((mod(it, neout).eq.0).and.(it.lt.nequib)))) then
       if (rank.eq.0) then
         if (it.lt.nequib) then
@@ -198,4 +225,4 @@ program marble
   call MPI_Type_free(MPI_BLOCK2, ierror)
   call MPI_Type_free(MPI_BLOCK, ierror)
   call MPI_Finalize(ierror)
-end program marble
+end program diag

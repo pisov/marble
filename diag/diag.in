@@ -1,0 +1,9 @@
+nequib =      0
+neout =       1
+nit =      1000 
+nout =     1000  
+Temp =      1.0
+nsize =    1024 
+pbvac =    0.05
+pbratio =   0.4
+pbfrmv =    0.5
