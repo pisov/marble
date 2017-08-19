@@ -1,7 +1,7 @@
-nit =  100000
-nout = 100000
+nit =  100000000
+nout = 1000000
 Temp =    1.0
-nsize =   20000 
+nsize =   1024 
 pbvac =  0.01
 pbratio = 0.5
 pbfrmv =  0.1
