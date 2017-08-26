@@ -3,6 +3,7 @@ This is shared project for MC vacancy exclution dynamic of bi-component system. 
 
 * serial - Serial algoritm implementation
 * parallel - Parallel algoritm implementation
+* chess - Different approach to the parallel algoritm implementation
 * tool - Analysis tools such as cluster count and etc. 
 
 Basic steps
