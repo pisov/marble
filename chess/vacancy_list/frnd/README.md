@@ -28,12 +28,12 @@ Due to the restrictions of the algorithm the program must be runned on ```(n+2)(
 
 This can be made by edditing the ```marble.in``` file. 
 
-```nit``` - number of iterations
-```nout``` - the number of iterations on which a checkpoint file is made
-```nsize``` - size of the grid 
-```pbvac``` - the percentage content of the vacancies in the system
-```pbratio``` - the ratio of the two substances in the system
-```pbfrmv``` -  the probability of exclusion; ```(1-pbfrmv)``` - probability of diffusion
+```nit``` - number of iterations <br />
+```nout``` - the number of iterations on which a checkpoint file is made <br />
+```nsize``` - size of the grid <br />
+```pbvac``` - the percentage content of the vacancies in the system <br />
+```pbratio``` - the ratio of the two substances in the system <br />
+```pbfrmv``` -  the probability of exclusion; ```(1-pbfrmv)``` - probability of diffusion <br />
 
 ## Postprocessing
 
