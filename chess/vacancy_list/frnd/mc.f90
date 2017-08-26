@@ -51,7 +51,7 @@ module mc
 
        !0.857
        call random_number(r)
-       if(r.lt.0.857)then
+       if(r.lt.pbfrmv)then
        do is = 1, nvac
 
        ix = vac(is,1)
@@ -130,7 +130,7 @@ module mc
 
        !0.857
        call random_number(r)
-       if(r.lt.0.857)then
+       if(r.lt.pbfrmv)then
        do is = 1, nvac
        ix = vac(is,1)
        iy = vac(is,2)

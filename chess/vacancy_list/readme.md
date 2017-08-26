@@ -7,13 +7,13 @@ The program must be compiled with a paralel version of the ```intel``` compiler.
 Due to the restrictions of the algorithm the program must be runned on ```(n+2)(m+2)``` number of cores. The size of the grid must also be able to divide properly into the subgrids for each processor.
 
 -------------------------------------------------------------------------------------
-## Folder vacancy_list
+## Folder frnd
 
 Parallel version of the program, where vacancies are in seperate array.
- This implementation uses the fortran function random_number or The Scalable Parallel Random Number Generators Library (SPRNG) for generating random numbers.
+ This implementation uses the fortran function random_number for generating random numbers.
 
 -------------------------------------------------------------------------------------
-## Folder no_vacancy_list
+## Folder SPRNG
 
-Parallel version of the program, where vacancies are NOT in seperate array.
- This implementation uses the fortran function random_number for generating random numbers.
+Parallel version of the program, where vacancies are in seperate array.
+ This implementation uses the The Scalable Parallel Random Number Generators Library (SPRNG) for generating random numbers.

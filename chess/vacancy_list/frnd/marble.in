@@ -4,5 +4,5 @@ Temp =    1.0
 nsize =   1024 
 pbvac =  0.01
 pbratio = 0.5
-pbfrmv =  0.1
+pbfrmv =  0.857
 

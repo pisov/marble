@@ -1,11 +1,11 @@
 # Chess parallelization with vacancy list
 
 Parallel version of the program, where vacancies are in seperate array.
- This implementation uses the fortran function random_number for generating random numbers.
+This implementation uses The Scalable Parallel Random Number Generators Library (SPRNG) for generating random numbers.
 
 ## Compilation and execution
 
-The program must be compiled with a paralel version of the ```intel``` compiler. The defaule compiler is ```mpif90``` and it is set in Makefile with ```FC=mpif90```.
+In order the program to be compiled the SPRNG library must be installed and it must be compiled with a paralel version of the ```intel``` compiler. The defaule compiler is ```mpif90``` and it is set in Makefile with ```FC=mpif90```.
 
 To compile
 
@@ -33,6 +33,7 @@ This can be made by edditing the ```marble.in``` file.
 ```nsize``` - size of the grid 
 ```pbvac``` - the percentage content of the vacancies in the system
 ```pbratio``` - the ratio of the two substances in the system
+```pbfrmv``` -  the probability of exclusion; ```(1-pbfrmv)``` - probability of diffusion
 
 ## Postprocessing
 
