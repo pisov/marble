@@ -2,7 +2,7 @@ program dump
 use globvars
 use utils
 implicit none
-        real enpyx,enpyy      ! 
+        real enpyx,enpyy,koefA,koefB      ! 
 !        character*128 :: filename
         character*16 :: iter
 !        character*128 :: path
@@ -40,8 +40,10 @@ implicit none
         call clus(nsize,CA,iter,nuclu) 
 !        call draw(nsize,CA,iter)
         call enpy(nsize,CA,enpyx,enpyy) 
+        call koef(CA,nsize,koefA,koefB)
         
- write (*,'(f6.5,3X,I9,3X,I9,3X,f10.6,3X,f10.6)') real(pbvac) ,nuiter*nout,nuclu,enpyx,enpyy
+! write (*,'(f6.5,3X,I9,3X,I9,3X,f10.6,3X,f10.6)') real(pbvac) ,nuiter*nout,nuclu,enpyx,enpyy
+ write (*,'(f6.5,3X,I9,3X,I9,3X,f10.6,3X,f10.6,3X,f10.6,3X,f10.6)') pbfrmv,nuiter*nout,nuclu,enpyx,enpyy, koefA,koefB
   close(fh)
   deallocate(CA)
 !c end of executions block
@@ -307,61 +309,183 @@ implicit none
 
 
 !c-----------------------------------------
-        subroutine enpy(LS,CA,enpyx,enpyy) 
-       integer LS,   ix, iy,i
-       integer CA(LS,LS)
-       integer enpy1(LS)
-       integer enpy2(LS)
-       real enpyx,enpyy
-       integer br1,br2,aa,bb,cc,dd
 
-       bb=-2
-       dd=-2
+      subroutine koef(CA,LS,koefA,koefB)
+       use globvars
+      implicit none
+      
+      integer :: LS
+      integer,dimension(LS,LS) :: CA
+      real :: koefA,koefB
+      integer :: i,j,con1,con2
+      integer ip(LS), im(LS)
+
+      im(1) = LS
+      do i = 2, LS
+        im(i) = i -1
+      enddo
+      do i = 1, LS-1
+        ip(i) = i +1
+      enddo
+      ip(i) = 1
+
+      koefA=0
+      koefB=0
+      con1=0
+      con2=0
+
+      do j=1, LS
+         do i=1,LS
+            if(CA(i,j) .eq. type_red)then
+            con1=con1+1
+
+               if(CA(i,ip(j)).eq. type_red)then
+                  koefA = koefA +1
+               endif
+            
+               if(CA(ip(i),j).eq. type_red)then
+               koefA = koefA +1
+               endif
+
+               if(CA(i,im(j)).eq. type_red)then
+                  koefA = koefA +1
+               endif
+
+               if(CA(im(i),j).eq. type_red)then
+                  koefA = koefA +1
+               endif
+            elseif(CA(i,j) .eq. type_blue)then 
+            con2=con2+1
+
+               if(CA(i,ip(j)).eq. type_blue)then
+                  koefB = koefB +1
+               endif
+            
+               if(CA(ip(i),j).eq. type_blue)then
+               koefB = koefB +1
+               endif
+
+               if(CA(i,im(j)).eq. type_blue)then
+                  koefB = koefB +1
+               endif
+
+               if(CA(im(i),j).eq. type_blue)then
+                  koefB = koefB +1
+               endif
+            endif
+         enddo
+      enddo
+
+      koefB=koefB/con2
+      koefA=koefA/con1
+
+      return
+      end
+
+!c-----------------------------------------
+        subroutine enpy(LS,CA,enpyx,enpyy) 
+                use globvars
+       implicit none
+       integer  ::LS, ix, iy,i,en1,en2
+       integer :: CA(LS,LS)
+       integer,dimension (1:LS) :: enpy1,enpy2
+       real  :: enpyx,enpyy,Median
+       integer ::  br1,br2,aa,bb,cc,dd
+       
+
+
+!        write(*,*) CA
        do ix=1,LS
+          en1=LS
+          en2=LS
           br1=0
           br2=0
+          bb=CA(ix,LS)
+          dd=CA(LS,ix)
 
-          do iy=1,LS
+          if(bb .eq. 0)then
+                  en1=LS
+                do while (bb.eq.0.and.en1.ne.1)
+                   en1=en1-1
+                   bb=CA(ix,en1)
+                enddo
+          endif
+
+          if(dd .eq. 0)then
+                  en2=LS
+                do while (dd.eq.0.and. en2.ne.1)
+                   en2=en2-1
+                   dd=CA(en2,ix)
+                enddo
+          endif
+!          write(*,*)'end1',en1,'end2',en2
+
+          do iy=1,en1
              aa=CA(ix,iy)
-             cc=CA(iy,ix)
-           
 
              if(aa.eq.0)then
-                i=iy
-                do while (aa.eq.0.and.i.ne.1)
-                   i=i-1
-                   aa=CA(ix,i)
-                enddo
+                cycle
              endif
-             if(aa.eq.bb.and.aa.ne.0)then
+
+             if(aa.ne.bb.and.aa.ne.0)then
                 br1=br1+1
              endif
 
+             if(CA(ix,iy) .ne. 0) then
+                bb= CA(ix,iy)
+             endif
+
+             end do
+        
+          do iy=1,en2
+             cc=CA(iy,ix)
 
              if(cc.eq.0)then
-                i=ix
-                do while (cc.eq.0.and.i.ne.1)
-                   i=i-1
-                   cc=CA(i,iy)
-                enddo
+                cycle
              endif
-             if(cc.eq.dd.and.cc.ne.0)then
+
+             if(cc.ne.dd.and.cc.ne.0)then
                 br2=br2+1
              endif
 
+             if (CA(iy,ix) .ne. 0) then
+                dd= CA(iy,ix)
+             endif
 
-             dd= CA(iy,ix)
-             bb= CA(ix,iy)
           enddo
-          enpy1(ix)=LS-1-br1
-          enpy2(ix)=LS-1-br2
+          
+!          write(*,*) br1, br2
+          enpy1(ix)=br1
+          enpy2(ix)=br2
        enddo
         enpyx=SUM(enpy1)/real(LS)
         enpyy=SUM(enpy2)/real(LS)
 
+!       enpyx = Median( enpy1 , LS )
+!       enpyy = Median( enpy2 , LS )
+
+
         return
         end
 
+!c-----------------------------------------
+
+REAL FUNCTION  Median(enpy, LS)
+        IMPLICIT  NONE
+        INTEGER, DIMENSION(1:LS) :: enpy
+        INTEGER     :: LS
+        INTEGER, DIMENSION(1:LS)            :: Temp
+        INTEGER                            :: i
+
+        CALL  buble(LS,enpy)               ! sort the copy
+        IF (MOD(LS,2) == 0) THEN           ! compute the median
+                Median = (enpy(LS/2) + enpy(LS/2+1)) / 2.0
+        ELSE
+                Median = enpy(LS/2+1)
+        END IF
+        RETURN
+       
+END FUNCTION  Median
 !c-----------------------------------------
         subroutine draw(LS,CA,iter)
         use utils

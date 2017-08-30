@@ -3,8 +3,6 @@ module mc
   implicit none
         
 #define SIMPLE_SPRNG
-!#define USE_MPI                 ! use MPI to find number of processes 
-!#include <mpif.h>
   contains
 
   subroutine MC_init_mesh(mesh, nvac, pbvac, pbratio,rank,stream)
@@ -18,9 +16,8 @@ module mc
     integer :: i, j, vidx
     real*8 :: prob
 ! SPRNG
-!  integer seed,gtype,junk
     SPRNG_POINTER stream
-!   junk = print_sprng()
+
     nvac=0
    do i = 1, nrow
    do j = 1, ncol
@@ -71,7 +68,6 @@ module mc
 #include "sprng_f.h"
 ! SPRNG
        SPRNG_POINTER stream
-
        LS2 = mcount * ncount                 ! Total number of attempts = lattice area
        
 !

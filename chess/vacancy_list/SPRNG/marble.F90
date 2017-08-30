@@ -12,18 +12,15 @@ program marble
 #include "sprng_f.h"
 
   !Define variables
-  !Interaction matrix where energy between each sample is stored
-  !blue-blue, blue-red, red-red, red-vacancy, blue-cavancy, vacancy-vacancy
-  double precision, dimension(3) :: Jmtx
   !Grid variables
-  integer, allocatable, dimension(:,:) :: mesh, cbuf, rbuf, wbuf
+  integer, allocatable, dimension(:,:) :: mesh, wbuf
   !Vacancy list
   integer, allocatable, dimension(:,:) :: vac
   
   !chess grid
   integer,dimension(:),allocatable :: black,wite
 
-  integer :: i, j,jj, k, ierror, req, msg_status, nvac, nvacob, rbuf_size
+  integer :: i, j,jj, k, ierror, req, msg_status, nvac
   integer :: totnvac
   integer(kind=8) :: cnt
   character(len=32) :: write_fmt, filename
@@ -165,16 +162,15 @@ seed=make_sprng_seed()
   allocate(mesh(0:nrow+1, 0:ncol+1))
   allocate(wbuf(nrow, ncol))
   !seed the random number generator
-!  call MC_init_random_seed(rank)
   !Initialize the grid
-!  call MC_init_mesh(mesh,  nvac, pbvac, pbratio,rank,stream)
+  call MC_init_mesh(mesh,  nvac, pbvac, pbratio,rank,stream)
   
-  if(mod(rank,2).eq.0) then
-          mesh(:,:)=1
-  else
-          mesh(:,:)=2
-  endif
-  call MC_add_vac(mesh,  nvac, pbvac, pbratio,rank,stream)
+! if(mod(rank,2).eq.0) then
+!         mesh(:,:)=1
+! else
+!         mesh(:,:)=2
+! endif
+! call MC_add_vac(mesh,  nvac, pbvac, pbratio,rank,stream)
 
   call MPI_Allreduce(nvac, totnvac, 1, MPI_INTEGER, MPI_SUM, MPI_COMM_2D, ierror)
   allocate(vac(totnvac,2))
@@ -183,7 +179,6 @@ seed=make_sprng_seed()
 
   !File writes counter initialization
 !!!!!!!!!!!!!
-!!!!!!x`
 
    call  MPI_Sendrecv(mesh(1,0)      ,1,MPI_TYPE_ROW, up ,0,&
         mesh(nrow+1,0),1,MPI_TYPE_ROW,down,0,&

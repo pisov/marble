@@ -12,14 +12,14 @@ program marble
   !blue-blue, blue-red, red-red, red-vacancy, blue-cavancy, vacancy-vacancy
   double precision, dimension(3) :: Jmtx
   !Grid variables
-  integer, allocatable, dimension(:,:) :: mesh, cbuf, rbuf, wbuf
+  integer, allocatable, dimension(:,:) :: mesh, wbuf
   !Vacancy list
   integer, allocatable, dimension(:,:) :: vac
   
   !chess grid
   integer,dimension(:),allocatable :: black,wite
 
-  integer :: i, j,jj, k, ierror, req, msg_status, nvac, nvacob, rbuf_size
+  integer :: i, j,jj, k, ierror, req, msg_status, nvac
   integer :: totnvac
   integer(kind=8) :: cnt
   character(len=32) :: write_fmt, filename
@@ -158,7 +158,6 @@ program marble
 
   !File writes counter initialization
 !!!!!!!!!!!!!
-!!!!!!x`
 
    call  MPI_Sendrecv(mesh(1,0)      ,1,MPI_TYPE_ROW, up ,0,&
         mesh(nrow+1,0),1,MPI_TYPE_ROW,down,0,&

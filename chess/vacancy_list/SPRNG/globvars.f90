@@ -22,7 +22,7 @@ module globvars
   !The Temperature of the sample
   !Total energy of the sample
   !pbvac - probability density of vacancies
-  !pbratio - probability dencity ratio between type I and type II particles
+  !pbratio -  the probability of exclusion; (1-pbfrmv) - probability of diffusion
   double precision :: Temp = 0.d0, Energy, pbvac = 0.01d0, pbratio = 0.5d0
   double precision :: pbfrmv = 0.1d0
 
@@ -44,6 +44,6 @@ module globvars
 
   integer, allocatable, dimension(:) :: scounts
   integer(kind=MPI_OFFSET_KIND), allocatable, dimension(:) :: displs
-  integer :: up, down, left, right
 
+  integer :: up, down, left, right
 end module globvars

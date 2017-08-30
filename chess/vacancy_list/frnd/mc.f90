@@ -39,14 +39,9 @@ module mc
       subroutine xLatex(mcount,ncount,mesh, vac, nvac ) ! Performs the vacancy exchanges
        integer mcount,ncount, LS2, nvac,is,il,ir,ix,iy
        integer mesh(0:mcount+1,0:ncount+1), vac(nvac,2)
-!       integer ip(LS),im(LS)
-      real r 
-        integer seed, len, junk,streamnum, nstreams
-        integer gtype,stream
+       real r 
        LS2 = mcount * ncount                 ! Total number of attempts = lattice area
 
-!        seed = make_sprng_seed()
-!        stream = init_sprng(seed,SPRNG_DEFAULT,1)
 !
 
        !0.857
@@ -116,16 +111,9 @@ module mc
         subroutine yLatex(mcount,ncount,mesh,vac,nvac) ! Performs the vacancy exchanges
        integer mcount,ncount, LS2,nvac, is, ix, iy, il, ir
        integer mesh(0:mcount+1,0:ncount+1),vac(nvac,2)
-!       integer ip(LS),im(LS)
-      real r 
-!#include "sprng_f.h"
-!#define SIMPLE_SPRNG	
-        integer seed, len, junk,streamnum, nstreams
-        integer gtype,stream
+       real r 
        LS2 = mcount * ncount                 ! Total number of attempts = lattice area
 
-!        seed = make_sprng_seed()
-!        stream = init_sprng(seed,SPRNG_DEFAULT,1)
 !
 
        !0.857
